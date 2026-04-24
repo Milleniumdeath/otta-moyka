@@ -1,0 +1,174 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Dashboard — Ishchi{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'worker:dashboard' %}" class="nav-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'worker:my_ads' %}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a>
+<a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar{% if pending_count %} <span class="nav-badge">{{ pending_count }}</span>{% endif %}</a>
+<a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block extra_style %}
+<style>
+.g-card { border-radius:20px; padding:28px; position:relative; overflow:hidden; margin-bottom:16px; }
+.g-card::before { content:''; position:absolute; width:220px; height:220px; border-radius:50%; top:-60px; right:-40px; pointer-events:none; }
+.g-card.teal { background:linear-gradient(135deg,#04161a 0%,#082d33 55%,#0b6e74 100%); border:1px solid rgba(15,143,152,0.35); }
+.g-card.teal::before { background:radial-gradient(circle,rgba(15,143,152,0.28),transparent 70%); }
+.g-card.dark { background:linear-gradient(135deg,#04161a 0%,#082d33 100%); border:1px solid rgba(42,77,99,0.4); }
+.g-card.dark::before { background:radial-gradient(circle,rgba(42,77,99,0.25),transparent 70%); }
+.g-grid { display:grid; position:relative; z-index:1; }
+.g-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+.g-grid-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+.g-col { padding:0 22px; border-right:1px solid rgba(107,156,186,0.12); }
+.g-col:first-child { padding-left:0; }
+.g-col:last-child  { padding-right:0; border-right:none; }
+.g-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:rgba(107,156,186,0.55); margin-bottom:10px; }
+.g-val { font-family:'Bebas Neue',sans-serif; font-size:44px; color:#fff; line-height:1; margin-bottom:4px; }
+.g-val.dim   { font-size:34px; color:#6b9cba; }
+.g-val.green { color:#00e87a !important; font-size:36px; }
+.g-val.red   { color:#ff4d6a !important; font-size:36px; }
+.g-val.amber { color:#f59e0b !important; font-size:36px; }
+.g-sub { font-size:12px; color:rgba(107,156,186,0.4); margin-bottom:12px; }
+.g-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.g-badge.teal  { background:rgba(15,143,152,0.2);  border:1px solid rgba(15,143,152,0.3);  color:#0f8f98; }
+.g-badge.green { background:rgba(0,232,122,0.12);  border:1px solid rgba(0,232,122,0.2);   color:#00e87a; }
+.g-badge.red   { background:rgba(255,77,106,0.12); border:1px solid rgba(255,77,106,0.2);  color:#ff4d6a; }
+.g-badge.amber { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.2);  color:#f59e0b; }
+
+.g-chart { background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; padding:24px; margin-bottom:16px; }
+.g-chart-title { font-size:15px; font-weight:700; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.g-chart-title i { color:var(--accent2); }
+.bar-area { display:flex; align-items:flex-end; gap:8px; height:120px; border-bottom:1px solid var(--border2); }
+.bar-col  { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.bar-body { width:100%; border-radius:6px 6px 0 0; min-height:3px; position:relative; background:linear-gradient(180deg,#0f8f98,#0b6e74); }
+.bar-body:hover { filter:brightness(1.3); cursor:default; }
+.bar-body:hover::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); background:var(--card-s); border:1px solid var(--border); color:var(--accent2); font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap; z-index:10; }
+.bar-lbl  { font-size:10px; color:var(--muted); margin-top:6px; }
+
+.g-list-card { background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.g-list-head { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.g-list-title { font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.g-list-title i { color:var(--accent2); }
+.g-row { background:transparent; border-bottom:1px solid var(--border2); padding:14px 20px; display:flex; align-items:center; gap:16px; transition:background 0.2s; flex-wrap:wrap; }
+.g-row:last-child { border-bottom:none; }
+.g-row:hover { background:rgba(15,143,152,0.04); }
+.g-row-who  { font-size:14px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.g-row-meta { font-size:12px; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap; }
+.g-row-price { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--accent2); flex-shrink:0; white-space:nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- 1: DAROMAD + BUYURTMALAR — bitta katta karta -->
+<div class="g-card teal">
+    <div class="g-grid g-grid-3" style="margin-bottom:24px;">
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-sack-dollar"></i> Jami daromad</div>
+            <div class="g-val">{{ total_earnings|floatformat:0 }}</div>
+            <div class="g-sub">so'm · 50% ulush</div>
+            <div class="g-badge teal"><i class="fa-solid fa-arrow-trend-up"></i> {{ completed_orders }} ta muvaffaqiyatli</div>
+        </div>
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-calendar-days"></i> Bu oylik</div>
+            <div class="g-val dim">{{ monthly_earnings|floatformat:0 }}</div>
+            <div class="g-sub">so'm</div>
+        </div>
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-coins"></i> Tangalar</div>
+            <div class="g-val dim">{{ loyalty_balance }}</div>
+            <div class="g-sub">sodiqlik tangasi</div>
+        </div>
+    </div>
+
+    <!-- Buyurtma statistikasi ham shu kartada -->
+    <div style="border-top:1px solid rgba(107,156,186,0.12);padding-top:20px;">
+        <div class="g-grid g-grid-4">
+            <div class="g-col">
+                <div class="g-lbl"><i class="fa-solid fa-clipboard-list"></i> Jami buyurtmalar</div>
+                <div class="g-val dim" style="font-size:40px;color:#fff;">{{ total_orders }}</div>
+            </div>
+            <div class="g-col">
+                <div class="g-lbl"><i class="fa-solid fa-circle-check"></i> Yakunlangan</div>
+                <div class="g-val green">{{ completed_orders }}</div>
+            </div>
+            <div class="g-col">
+                <div class="g-lbl"><i class="fa-solid fa-circle-xmark"></i> Rad etilgan</div>
+                <div class="g-val red">{{ rejected_orders }}</div>
+            </div>
+            <div class="g-col">
+                <div class="g-lbl"><i class="fa-solid fa-hourglass-half"></i> Kutilmoqda</div>
+                <div class="g-val amber">{{ pending_count }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2: HAFTALIK GRAFIK -->
+<div class="g-chart">
+    <div class="g-chart-title">
+        <i class="fa-solid fa-chart-bar"></i> Oxirgi 7 kunlik daromad
+        <span style="margin-left:auto;font-size:12px;color:var(--muted);font-weight:400;display:flex;align-items:center;gap:6px;">
+            <span style="width:10px;height:10px;border-radius:2px;background:linear-gradient(135deg,#0f8f98,#0b6e74);display:inline-block;"></span> Daromad (so'm)
+        </span>
+    </div>
+    <div class="bar-area">
+        {% for d in week_data %}
+        <div class="bar-col">
+            <div class="bar-body" data-val="{{ d.earn }}" data-tip="{{ d.earn|floatformat:0 }} so'm" style="height:3px;"></div>
+            <div class="bar-lbl">{{ d.date }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 3: YANGI BUYURTMALAR -->
+{% if pending_orders %}
+<div class="g-list-card">
+    <div class="g-list-head">
+        <div class="g-list-title"><i class="fa-solid fa-bell"></i> Yangi Buyurtmalar</div>
+        <a href="{% url 'worker:orders' %}" class="btn btn-ghost btn-sm">Barchasi <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+    {% for o in pending_orders %}
+    <div class="g-row">
+        <div style="flex:1;">
+            <div class="g-row-who">
+                <i class="fa-solid fa-user fa-xs" style="color:var(--accent2);"></i>
+                {{ o.customer.get_full_name|default:o.customer.email }}
+                {% if o.customer.phone %}<span style="font-size:12px;color:var(--muted);font-weight:400;margin-left:8px;"><i class="fa-solid fa-phone fa-xs"></i> {{ o.customer.phone }}</span>{% endif %}
+            </div>
+            <div class="g-row-meta">
+                <span><i class="fa-solid fa-truck-moving fa-xs"></i> {{ o.car }}</span>
+                <span><i class="fa-solid fa-wrench fa-xs"></i> {{ o.service_ad.get_service_type_display }}</span>
+                {% if o.note %}<span style="color:var(--accent2);"><i class="fa-solid fa-comment-dots fa-xs"></i> {{ o.note|truncatechars:40 }}</span>{% endif %}
+            </div>
+        </div>
+        <div class="g-row-price">{{ o.total_price|floatformat:0 }} <span style="font-size:13px;color:var(--muted);">so'm</span></div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+            <form method="post" action="{% url 'worker:accept_order' o.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i> Qabul</button></form>
+            <form method="post" action="{% url 'worker:reject_order' o.pk %}">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-xmark"></i> Rad</button></form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const bars = document.querySelectorAll('.bar-body[data-val]');
+    const vals = [...bars].map(b => parseInt(b.dataset.val) || 0);
+    const mx   = Math.max(...vals, 1);
+    bars.forEach(b => {
+        const v = parseInt(b.dataset.val) || 0;
+        b.style.height = (v > 0 ? Math.max((v / mx) * 108, 8) : 3) + 'px';
+    });
+});
+</script>
+{% endblock %}

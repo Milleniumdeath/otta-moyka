@@ -1,0 +1,158 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Bonuslar{% endblock %}
+{% block page_title %}Bonuslar{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'customer:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'customer:my_cars' %}" class="nav-item"><i class="fa-solid fa-truck-moving"></i> Mashinalarim</a>
+<a href="{% url 'customer:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
+<a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'customer:bonuses' %}" class="nav-item active"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block extra_style %}
+<style>
+.loyalty-hero {
+    background: linear-gradient(135deg, #04161a 0%, #082d33 50%, #2a4d63 100%);
+    border: 1px solid rgba(107,156,186,0.25);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+.loyalty-hero::before {
+    content: '';
+    position: absolute;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(107,156,186,0.12), transparent 70%);
+    top: -80px; right: -60px;
+    border-radius: 50%;
+}
+.lh-grid { display: grid; grid-template-columns: auto 1fr auto; gap: 32px; align-items: center; position: relative; z-index: 1; }
+.lh-bal-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: rgba(107,156,186,0.55); margin-bottom: 8px; }
+.lh-bal-val { font-family: 'Bebas Neue', sans-serif; font-size: 72px; color: #fff; letter-spacing: 2px; line-height: 1; }
+.lh-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: rgba(107,156,186,0.55); margin-bottom: 8px; }
+.lh-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
+.lh-bar-fill { height: 100%; background: linear-gradient(90deg, #082d33, #2a4d63, #6b9cba); border-radius: 8px; }
+.lh-bar-hint { font-size: 11px; color: rgba(107,156,186,0.35); margin-top: 6px; }
+.lh-stats { display: flex; flex-direction: column; gap: 14px; }
+.lh-stat-label { font-size: 11px; color: rgba(107,156,186,0.45); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+.lh-stat-val { font-size: 20px; font-weight: 700; }
+
+.tx-list { display: flex; flex-direction: column; }
+.tx-item { display: flex; align-items: center; gap: 14px; padding: 14px 20px; border-bottom: 1px solid var(--border2); }
+.tx-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.tx-icon.earn  { background: rgba(0,232,122,0.1); color: var(--green); }
+.tx-icon.spend { background: rgba(255,77,106,0.1); color: var(--red); }
+.tx-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.tx-date  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.tx-amount.earn  { color: var(--green); font-size: 15px; font-weight: 800; }
+.tx-amount.spend { color: var(--red); font-size: 15px; font-weight: 800; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- LOYALTY HERO -->
+<div class="loyalty-hero">
+    <div class="lh-grid">
+        <div>
+            <div class="lh-bal-lbl"><i class="fa-solid fa-coins"></i> Balans</div>
+            <div class="lh-bal-val">{{ loyalty.balance }}</div>
+            <div style="font-size:13px;color:rgba(107,156,186,0.45);margin-top:4px;">sodiqlik tangasi</div>
+        </div>
+        <div>
+            <div class="lh-bar-label">
+                <span>Sodiqlik darajasi</span>
+                <span style="color:#6b9cba;">{{ loyalty.loyalty_percentage|default:0 }}%</span>
+            </div>
+            <div class="lh-bar">
+                <div class="lh-bar-fill" style="width:{{ loyalty.loyalty_percentage|default:0 }}%"></div>
+            </div>
+            <div class="lh-bar-hint">100% uchun 10 ta muvaffaqiyatli buyurtma kerak</div>
+        </div>
+        <div class="lh-stats">
+            <div>
+                <div class="lh-stat-label">Yig'ilgan</div>
+                <div class="lh-stat-val" style="color:#6b9cba;">+{{ loyalty.total_earned }}</div>
+            </div>
+            <div>
+                <div class="lh-stat-label">Sarflangan</div>
+                <div class="lh-stat-val" style="color:#ff4d6a;">-{{ loyalty.total_spent }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BONUSLAR + TARIX -->
+<div style="display:grid;grid-template-columns:1fr 340px;gap:20px;">
+
+    <!-- BONUSLAR -->
+    <div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-gift" style="color:var(--accent2);"></i> Mavjud Bonuslar
+        </div>
+        <div class="bonus-grid">
+        {% for b in bonuses %}
+        <div class="bonus-card">
+            <div class="bonus-img">
+                {% if b.image %}<img src="{{ b.image.url }}" alt="{{ b.name }}">
+                {% else %}<i class="fa-solid fa-gift"></i>{% endif %}
+            </div>
+            <div class="bonus-body">
+                <div class="bonus-name">{{ b.name }}</div>
+                <div class="bonus-desc">{{ b.description|truncatechars:55 }}</div>
+                <div class="bonus-foot">
+                    <div class="bonus-cost"><i class="fa-solid fa-coins fa-sm"></i> {{ b.token_cost }}</div>
+                    {% if b.is_available %}
+                        {% if loyalty.balance >= b.token_cost %}
+                        <form method="post" action="{% url 'customer:claim_bonus' b.pk %}">{% csrf_token %}
+                            <button class="btn btn-primary btn-sm"><i class="fa-solid fa-hand"></i> Olish</button>
+                        </form>
+                        {% else %}
+                        <span style="font-size:12px;color:var(--red);"><i class="fa-solid fa-lock fa-xs"></i> Yetarli emas</span>
+                        {% endif %}
+                    {% else %}<span class="badge badge-rejected">Tugagan</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state" style="grid-column:1/-1"><div class="empty-icon"><i class="fa-solid fa-gift"></i></div><p>Hali bonuslar yo'q</p></div>
+        {% endfor %}
+        </div>
+    </div>
+
+    <!-- TANGA TARIXI -->
+    <div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-clock-rotate-left" style="color:var(--accent2);"></i> Tanga Tarixi
+        </div>
+        <div class="table-card">
+            {% if transactions %}
+            <div class="tx-list">
+            {% for tx in transactions %}
+            <div class="tx-item">
+                <div class="tx-icon {% if tx.tx_type == 'earn' %}earn{% else %}spend{% endif %}">
+                    <i class="fa-solid {% if tx.tx_type == 'earn' %}fa-arrow-down{% else %}fa-arrow-up{% endif %}"></i>
+                </div>
+                <div style="flex:1;">
+                    <div class="tx-title">{{ tx.description|truncatechars:28 }}</div>
+                    <div class="tx-date">{{ tx.created_at|date:"d.m.Y H:i" }}</div>
+                </div>
+                <div class="tx-amount {% if tx.tx_type == 'earn' %}earn{% else %}spend{% endif %}">
+                    {% if tx.tx_type == 'earn' %}+{% else %}-{% endif %}{{ tx.amount }}
+                </div>
+            </div>
+            {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:32px;"><div class="empty-icon"><i class="fa-solid fa-coins"></i></div><p>Hali harakatlar yo'q</p></div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

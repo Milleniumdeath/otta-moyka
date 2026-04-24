@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}OTTA Moyka{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root { --tr:0.35s ease; }
+        [data-theme="dark"] {
+            --bg:      #050a0f;
+            --bg2:     #080f18;
+            --card:    rgba(15,30,45,0.65);
+            --card-s:  #0f1e2d;
+            --border:  rgba(0,200,255,0.12);
+            --border2: rgba(255,255,255,0.05);
+            --cyan:    #00c8ff;
+            --green:   #00e87a;
+            --red:     #ff4d6a;
+            --amber:   #f59e0b;
+            --text:    #f0f8ff;
+            --muted:   #3d6070;
+            --soft:    #7aaabf;
+            --glass:   rgba(8,15,24,0.55);
+            --glass2:  rgba(15,30,45,0.45);
+            --nav:     rgba(5,10,15,0.88);
+            --shadow:  rgba(0,200,255,0.12);
+            --sidebar-w: 260px;
+        }
+        [data-theme="light"] {
+            --bg:      #eef4fb;
+            --bg2:     #e2edf7;
+            --card:    rgba(255,255,255,0.65);
+            --card-s:  #ffffff;
+            --border:  rgba(0,144,204,0.15);
+            --border2: rgba(0,0,0,0.06);
+            --cyan:    #0090cc;
+            --green:   #00a855;
+            --red:     #e03050;
+            --amber:   #d97706;
+            --text:    #0a1520;
+            --muted:   #7aa0b8;
+            --soft:    #4a7a95;
+            --glass:   rgba(255,255,255,0.6);
+            --glass2:  rgba(240,248,255,0.7);
+            --nav:     rgba(238,244,251,0.92);
+            --shadow:  rgba(0,144,204,0.15);
+            --sidebar-w: 260px;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family:'DM Sans',sans-serif;
+            background:var(--bg); color:var(--text);
+            min-height:100vh; display:flex; align-items:center; justify-content:center;
+            padding:20px; position:relative; overflow:hidden;
+            transition:background var(--tr), color var(--tr);
+        }
+
+        /* BG */
+        .auth-bg { position:fixed; inset:0; z-index:0; pointer-events:none; }
+        .auth-orb { position:absolute; border-radius:50%; filter:blur(90px); animation:orbF 14s ease-in-out infinite; }
+        .auth-orb1 { width:520px;height:520px; background:radial-gradient(circle,rgba(84,131,179,0.15),transparent 70%); top:-150px;right:-80px; opacity:0.6; animation-duration:16s; }
+        .auth-orb2 { width:380px;height:380px; background:radial-gradient(circle,rgba(5,38,89,0.5),transparent 70%); bottom:-100px;left:5%; opacity:0.5; animation-duration:20s;animation-delay:-8s; }
+        .auth-grid {
+            position:absolute; inset:0;
+            background-image:
+                linear-gradient(rgba(84,131,179,0.07) 1px,transparent 1px),
+                linear-gradient(90deg,rgba(84,131,179,0.07) 1px,transparent 1px);
+            background-size:52px 52px;
+            mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black,transparent);
+        }
+        @keyframes orbF { 0%,100%{transform:translate(0,0);} 50%{transform:translate(18px,-14px);} }
+
+        /* THEME BTN */
+        .auth-theme {
+            position:fixed; top:20px; right:20px; z-index:100;
+            width:40px; height:40px; border-radius:10px;
+            background:var(--glass); border:1px solid var(--border);
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; color:var(--soft); font-size:16px;
+            backdrop-filter:blur(12px); transition:all 0.3s;
+        }
+        .auth-theme:hover { border-color:var(--accent2); color:var(--accent2); transform:rotate(20deg); }
+
+        /* BOX */
+        .auth-box {
+            background:var(--glass);
+            backdrop-filter:blur(28px) saturate(1.5);
+            -webkit-backdrop-filter:blur(28px) saturate(1.5);
+            border:1px solid var(--border); border-radius:24px;
+            padding:44px 40px; width:100%; max-width:460px;
+            position:relative; z-index:1;
+            animation:boxIn 0.6s ease both;
+            box-shadow:0 24px 60px rgba(2,16,36,0.4);
+        }
+        @keyframes boxIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        .auth-box::before { content:''; position:absolute; top:0; left:20%; right:20%; height:1px; background:linear-gradient(90deg,transparent,var(--accent2),transparent); }
+
+        /* OTTA LOGO */
+        .auth-logo { text-align:center; margin-bottom:6px; }
+        .otta-svg-wrap { display:flex; justify-content:center; margin-bottom:8px; }
+        .auth-brand {
+            font-family:'Bebas Neue',sans-serif;
+            font-size:28px; letter-spacing:6px;
+            background:linear-gradient(135deg,#5483B3,#7DA0CA,#00b894);
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+            background-clip:text;
+        }
+        .auth-subtitle { text-align:center; color:var(--muted); font-size:12px; margin-bottom:32px; letter-spacing:1px; }
+
+        h2 { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; margin-bottom:24px; text-align:center; color:var(--text); }
+
+        /* ALERTS */
+        .messages { margin-bottom:20px; }
+        .msg { padding:11px 14px; border-radius:10px; font-size:13px; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+        .msg-error   { background:rgba(255,77,106,0.1); color:#ff4d6a; border:1px solid rgba(255,77,106,0.2); }
+        .msg-success { background:rgba(0,232,122,0.1); color:#00e87a; border:1px solid rgba(0,232,122,0.2); }
+        .msg-info    { background:rgba(84,131,179,0.1); color:var(--accent2); border:1px solid var(--border); }
+        .msg-warning { background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2); }
+
+        /* FORM */
+        .form-group { margin-bottom:18px; }
+        label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--muted); margin-bottom:6px; }
+        input[type=email],input[type=password],input[type=text],input[type=tel] {
+            width:100%; background:rgba(2,16,36,0.4);
+            border:1.5px solid var(--border2); border-radius:10px;
+            padding:12px 14px; color:var(--text); font-size:14px;
+            outline:none; transition:border-color 0.2s, box-shadow 0.2s;
+            font-family:'DM Sans',sans-serif; backdrop-filter:blur(8px);
+        }
+        [data-theme="light"] input { background:rgba(255,255,255,0.6); }
+        input:focus { border-color:var(--accent2); box-shadow:0 0 0 3px rgba(84,131,179,0.12); }
+        .input-icon-wrap { position:relative; }
+        .input-icon-wrap i { position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:14px; }
+        .input-icon-wrap input { padding-left:38px; }
+
+        /* ROLE CARDS */
+        .role-cards { display:flex; gap:12px; margin-bottom:20px; }
+        .role-card {
+            flex:1; cursor:pointer;
+            background:rgba(2,16,36,0.3); border:2px solid var(--border);
+            border-radius:14px; padding:18px 12px; text-align:center; transition:all 0.2s;
+        }
+        [data-theme="light"] .role-card { background:rgba(255,255,255,0.4); }
+        .role-card:hover { border-color:var(--accent2); }
+        .role-card.selected { border-color:var(--accent2); background:rgba(84,131,179,0.1); }
+        .role-card input[type=radio] { display:none; }
+        .role-icon { font-size:30px; color:var(--accent2); margin-bottom:10px; }
+        .role-lbl { color:var(--text); font-size:14px; font-weight:700; }
+        .role-desc { color:var(--muted); font-size:12px; margin-top:4px; }
+
+        /* BUTTONS */
+        .btn-auth {
+            width:100%; background:linear-gradient(135deg,#052659,#5483B3);
+            color:var(--light); border:none; border-radius:10px; padding:13px;
+            font-size:15px; font-weight:800; cursor:pointer; transition:all 0.2s;
+            margin-top:8px; font-family:'DM Sans',sans-serif;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+        }
+        .btn-auth:hover { filter:brightness(1.15); transform:translateY(-2px); box-shadow:0 10px 28px var(--shadow); }
+        .btn-google {
+            width:100%; background:var(--glass); color:var(--text);
+            border:1px solid var(--border); border-radius:10px; padding:12px;
+            font-size:14px; font-weight:600; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; gap:10px;
+            transition:all 0.2s; text-decoration:none;
+            backdrop-filter:blur(12px); font-family:'DM Sans',sans-serif;
+        }
+        .btn-google:hover { border-color:var(--accent2); transform:translateY(-1px); }
+        .google-svg { width:18px; height:18px; }
+
+        /* DIVIDER */
+        .divider { display:flex; align-items:center; gap:12px; margin:18px 0; color:var(--muted); font-size:12px; }
+        .divider::before,.divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+        /* LINK */
+        .auth-link { text-align:center; margin-top:18px; color:var(--muted); font-size:13px; }
+        .auth-link a { color:var(--accent2); text-decoration:none; font-weight:700; }
+        .auth-link a:hover { text-decoration:underline; }
+
+        /* CODE INPUTS */
+        .code-inputs { display:flex; gap:10px; justify-content:center; margin:20px 0; }
+        .code-inp {
+            width:52px; height:60px; text-align:center; font-size:24px; font-weight:800;
+            background:rgba(2,16,36,0.3); border:2px solid var(--border2); border-radius:12px;
+            color:var(--text); outline:none; transition:all 0.2s;
+            font-family:'Bebas Neue',sans-serif;
+        }
+        [data-theme="light"] .code-inp { background:rgba(255,255,255,0.6); }
+        .code-inp:focus { border-color:var(--accent2); box-shadow:0 0 0 3px rgba(84,131,179,0.12); transform:scale(1.05); }
+        .code-inp.filled { border-color:var(--accent2); background:rgba(84,131,179,0.08); }
+    </style>
+    {% block extra_style %}{% endblock %}
+</head>
+<body>
+    <div class="auth-bg">
+        <div class="auth-orb auth-orb1"></div>
+        <div class="auth-orb auth-orb2"></div>
+        <div class="auth-grid"></div>
+    </div>
+
+    <button class="auth-theme" id="authTheme">
+        <i class="fa-solid fa-moon" id="authThemeIcon"></i>
+    </button>
+
+    <div class="auth-box">
+        <!-- OTTA LOGO -->
+        <div class="auth-logo">
+            <div class="otta-svg-wrap">
+                <svg viewBox="0 0 120 50" xmlns="http://www.w3.org/2000/svg" width="80">
+                    <defs>
+                        <linearGradient id="ottaG2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#052659"/>
+                            <stop offset="50%" style="stop-color:#5483B3"/>
+                            <stop offset="100%" style="stop-color:#00b894"/>
+                        </linearGradient>
+                    </defs>
+                    <ellipse cx="18" cy="25" rx="14" ry="18" fill="none" stroke="url(#ottaG2)" stroke-width="5"/>
+                    <line x1="36" y1="8" x2="56" y2="8" stroke="url(#ottaG2)" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="46" y1="8" x2="46" y2="43" stroke="url(#ottaG2)" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="58" y1="8" x2="78" y2="8" stroke="url(#ottaG2)" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="68" y1="8" x2="68" y2="43" stroke="url(#ottaG2)" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="82" y1="43" x2="95" y2="8" stroke="url(#ottaG2)" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="95" y1="8" x2="108" y2="43" stroke="url(#ottaG2)" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="86" y1="30" x2="104" y2="30" stroke="url(#ottaG2)" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <div class="auth-brand">OTTA</div>
+        </div>
+        <div class="auth-subtitle">OLTIARIQ TOL TAGI · AVTO MOYKA</div>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="msg msg-{{ message.tags }}">
+                <i class="fa-solid fa-circle-info"></i> {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+<script>
+const html=document.documentElement;
+const btn=document.getElementById('authTheme');
+const icon=document.getElementById('authThemeIcon');
+let dark=localStorage.getItem('theme')!=='light';
+html.setAttribute('data-theme',dark?'dark':'light');
+icon.className=dark?'fa-solid fa-moon':'fa-solid fa-sun';
+btn.addEventListener('click',()=>{dark=!dark;html.setAttribute('data-theme',dark?'dark':'light');icon.className=dark?'fa-solid fa-moon':'fa-solid fa-sun';localStorage.setItem('theme',dark?'dark':'light');});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

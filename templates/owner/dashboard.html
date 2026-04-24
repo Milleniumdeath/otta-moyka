@@ -1,0 +1,110 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Dashboard — Moyka Egasi{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+
+{% block extra_style %}
+<style>
+.g-card { border-radius:20px; padding:28px; position:relative; overflow:hidden; margin-bottom:16px; }
+.g-card::before { content:''; position:absolute; width:220px; height:220px; border-radius:50%; top:-60px; right:-40px; pointer-events:none; }
+.g-card.teal { background:linear-gradient(135deg,#04161a 0%,#082d33 55%,#0b6e74 100%); border:1px solid rgba(15,143,152,0.35); }
+.g-card.teal::before { background:radial-gradient(circle,rgba(15,143,152,0.28),transparent 70%); }
+.g-card.blue { background:linear-gradient(135deg,#04161a 0%,#082d33 55%,#2a4d63 100%); border:1px solid rgba(107,156,186,0.25); }
+.g-card.blue::before { background:radial-gradient(circle,rgba(107,156,186,0.2),transparent 70%); }
+.g-grid { display:grid; position:relative; z-index:1; }
+.g-grid-2 { grid-template-columns:1fr 1fr; }
+.g-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+.g-grid-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+.g-col { padding:0 22px; border-right:1px solid rgba(107,156,186,0.12); }
+.g-col:first-child { padding-left:0; }
+.g-col:last-child  { padding-right:0; border-right:none; }
+.g-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:rgba(107,156,186,0.55); margin-bottom:10px; }
+.g-val { font-family:'Bebas Neue',sans-serif; font-size:44px; color:#fff; line-height:1; margin-bottom:4px; }
+.g-val.dim   { font-size:34px; color:#6b9cba; }
+.g-val.green { color:#00e87a !important; font-size:36px; }
+.g-val.red   { color:#ff4d6a !important; font-size:36px; }
+.g-val.amber { color:#f59e0b !important; font-size:36px; }
+.g-val.teal  { color:#0f8f98 !important; font-size:36px; }
+.g-sub { font-size:12px; color:rgba(107,156,186,0.4); margin-bottom:12px; }
+.g-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.g-badge.teal  { background:rgba(15,143,152,0.2);  border:1px solid rgba(15,143,152,0.3);  color:#0f8f98; }
+.g-badge.amber { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.2);  color:#f59e0b; }
+
+.g-list-card { background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.g-list-head { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.g-list-title { font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.g-list-title i { color:var(--accent2); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- 1: ASOSIY STATISTIKA — bitta gradient karta -->
+<div class="g-card teal">
+    <div class="g-grid g-grid-4">
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-circle-check"></i> Muvaffaqiyatli</div>
+            <div class="g-val">{{ completed_orders }}</div>
+            <div class="g-sub">yakunlangan buyurtma</div>
+            <div class="g-badge teal"><i class="fa-solid fa-arrow-trend-up"></i> Jami faoliyat</div>
+        </div>
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-circle-xmark"></i> Rad etilgan</div>
+            <div class="g-val red">{{ rejected_orders }}</div>
+            <div class="g-sub">rad etilgan buyurtma</div>
+        </div>
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-users-gear"></i> Ishchilar</div>
+            <div class="g-val teal">{{ workers_count }}</div>
+            <div class="g-sub">tasdiqlangan</div>
+            {% if pending_count %}
+            <div class="g-badge amber"><i class="fa-solid fa-hourglass-half"></i> {{ pending_count }} ta kutmoqda</div>
+            {% endif %}
+        </div>
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-users"></i> Mijozlar</div>
+            <div class="g-val amber">{{ customers_count }}</div>
+            <div class="g-sub">ro'yxatdan o'tgan</div>
+        </div>
+    </div>
+</div>
+
+<!-- 2: SO'NGGI BUYURTMALAR -->
+<div class="g-list-card">
+    <div class="g-list-head">
+        <div class="g-list-title"><i class="fa-solid fa-list-check"></i> So'nggi Buyurtmalar</div>
+    </div>
+    {% if recent_orders %}
+    <table style="width:100%;border-collapse:collapse;">
+        <thead>
+            <tr>
+                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">#</th>
+                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Mijoz</th>
+                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Ishchi</th>
+                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Mashina</th>
+                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Holat</th>
+                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Sana</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for o in recent_orders %}
+        <tr style="border-top:1px solid var(--border2);">
+            <td style="padding:13px 20px;font-size:14px;color:var(--accent2);font-weight:700;">#{{ o.id }}</td>
+            <td style="padding:13px 20px;font-size:14px;color:var(--text);font-weight:600;">{{ o.customer.get_full_name|default:o.customer.email }}</td>
+            <td style="padding:13px 20px;font-size:14px;color:var(--soft);">{{ o.worker.get_full_name|default:o.worker.email }}</td>
+            <td style="padding:13px 20px;font-size:14px;color:var(--soft);">{{ o.car }}</td>
+            <td style="padding:13px 20px;"><span class="badge badge-{{ o.status }}"><i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}</span></td>
+            <td style="padding:13px 20px;font-size:13px;color:var(--muted);">{{ o.created_at|date:"d.m.Y H:i" }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state" style="padding:40px 20px;">
+        <div class="empty-icon"><i class="fa-solid fa-inbox"></i></div>
+        <p>Hali buyurtmalar yo'q</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

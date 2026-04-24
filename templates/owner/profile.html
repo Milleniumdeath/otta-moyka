@@ -1,0 +1,21 @@
+{% extends 'base/panel_base.html' %}{% block title %}Profil{% endblock %}{% block page_title %}Profil{% endblock %}
+{% block sidebar_nav %}<a href="{% url 'owner:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a><a href="{% url 'owner:workers' %}" class="nav-item"><i class="fa-solid fa-users-gear"></i> Ishchilar</a><a href="{% url 'owner:customers' %}" class="nav-item"><i class="fa-solid fa-users"></i> Mijozlar</a><a href="{% url 'owner:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a><a href="{% url 'owner:cameras' %}" class="nav-item"><i class="fa-solid fa-video"></i> Kameralar</a><div class="nav-section">Sozlamalar</div><a href="{% url 'owner:profile' %}" class="nav-item active"><i class="fa-solid fa-user-gear"></i> Profil</a>{% endblock %}
+{% block content %}
+<div class="profile-card">
+    <div class="form-card-title"><i class="fa-solid fa-user-pen"></i> Profil Tahrirlash</div>
+    <form method="post" action="{% url 'owner:profile' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="profile-avatar-wrap">
+            <div class="profile-avatar">{% if request.user.avatar %}<img src="{{ request.user.avatar.url }}">{% else %}{{ request.user.first_name|first|upper }}{% endif %}</div>
+            <div><label class="form-label">Profil rasmi</label><input type="file" name="avatar" class="form-control" accept="image/*" style="width:auto;"></div>
+        </div>
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Ism</label><input type="text" name="first_name" class="form-control" value="{{ request.user.first_name }}"></div>
+            <div class="form-group"><label class="form-label">Familiya</label><input type="text" name="last_name" class="form-control" value="{{ request.user.last_name }}"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Telefon</label><input type="tel" name="phone" class="form-control" value="{{ request.user.phone|default:'' }}" placeholder="+998 90 000 00 00"></div>
+        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" value="{{ request.user.email }}" disabled style="opacity:0.5;"></div>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
+    </form>
+</div>
+{% endblock %}

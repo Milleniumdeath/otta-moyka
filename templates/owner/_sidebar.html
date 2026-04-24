@@ -1,0 +1,23 @@
+<a href="{% url 'owner:dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+    <i class="fa-solid fa-chart-line"></i> Dashboard
+</a>
+<a href="{% url 'owner:workers' %}" class="nav-item {% if 'worker' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="fa-solid fa-users-gear"></i> Ishchilar
+    {% if pending_count %}<span class="nav-badge">{{ pending_count }}</span>{% endif %}
+</a>
+<a href="{% url 'owner:customers' %}" class="nav-item {% if request.resolver_match.url_name == 'customers' %}active{% endif %}">
+    <i class="fa-solid fa-users"></i> Mijozlar
+</a>
+<a href="{% url 'owner:bonuses' %}" class="nav-item {% if 'bonus' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="fa-solid fa-gift"></i> Bonuslar
+</a>
+<a href="{% url 'owner:finance' %}" class="nav-item {% if 'finance' in request.resolver_match.url_name or 'expense' in request.resolver_match.url_name or 'income' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="fa-solid fa-wallet"></i> Kirim & Chiqim
+</a>
+<a href="{% url 'owner:cameras' %}" class="nav-item {% if request.resolver_match.url_name == 'cameras' %}active{% endif %}">
+    <i class="fa-solid fa-video"></i> Kameralar
+</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'owner:profile' %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+    <i class="fa-solid fa-user-gear"></i> Profil
+</a>

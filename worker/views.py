@@ -1,0 +1,204 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Sum
+from django.utils import timezone
+from core.models import Order, Bonus, LoyaltyToken
+from worker.models import ServiceAd
+from decimal import Decimal
+
+def worker_required(view_func):
+    @login_required
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_worker:
+            messages.error(request, "Ruxsat yo'q.")
+            return redirect('accounts:role_redirect')
+        if not request.user.is_approved:
+            return redirect('accounts:pending_approval')
+        return view_func(request, *args, **kwargs)
+    wrapper.__name__ = view_func.__name__
+    return wrapper
+
+
+@worker_required
+def dashboard(request):
+    all_orders       = Order.objects.filter(worker=request.user)
+    completed_orders = all_orders.filter(status=Order.Status.COMPLETED)
+    pending_orders   = all_orders.filter(status=Order.Status.PENDING).select_related('customer','car','service_ad')
+    loyalty, _       = LoyaltyToken.objects.get_or_create(user=request.user)
+
+    # ✅ Decimal bilan hisoblash
+    total_sum  = completed_orders.aggregate(t=Sum('total_price'))['t'] or Decimal('0')
+    earnings   = int(total_sum * Decimal('50') // Decimal('100'))
+
+    this_month = timezone.now().replace(day=1).date()
+    monthly_sum = completed_orders.filter(
+        completed_at__date__gte=this_month
+    ).aggregate(t=Sum('total_price'))['t'] or Decimal('0')
+    monthly_earnings = int(monthly_sum * Decimal('50') // Decimal('100'))
+
+    from datetime import date, timedelta
+    week_data = []
+    for i in range(6, -1, -1):
+        d = date.today() - timedelta(days=i)
+        cnt = completed_orders.filter(completed_at__date=d).count()
+        day_sum = completed_orders.filter(
+            completed_at__date=d
+        ).aggregate(t=Sum('total_price'))['t'] or Decimal('0')
+        earn = int(day_sum * Decimal('50') // Decimal('100'))
+        week_data.append({'date': d.strftime('%d.%m'), 'count': cnt, 'earn': earn})
+
+    return render(request, 'worker/dashboard.html', {
+        'total_orders':      all_orders.count(),
+        'completed_orders':  completed_orders.count(),
+        'rejected_orders':   all_orders.filter(status=Order.Status.REJECTED).count(),
+        'pending_count':     pending_orders.count(),
+        'loyalty_balance':   loyalty.balance,
+        'total_earnings':    earnings,
+        'monthly_earnings':  monthly_earnings,
+        'pending_orders':    pending_orders[:5],
+        'week_data':         week_data,
+    })
+
+@worker_required
+def my_ads(request):
+    ads = ServiceAd.objects.filter(worker=request.user)
+    return render(request, 'worker/my_ads.html', {'ads': ads})
+
+
+@worker_required
+def create_ad(request):
+    if request.method == 'POST':
+        title        = request.POST.get('title','').strip()
+        description  = request.POST.get('description','').strip()
+        service_type = request.POST.get('service_type','')
+        price        = request.POST.get('price', 0)
+        if not all([title, description, service_type, price]):
+            messages.error(request, "Barcha maydonlarni to'ldiring.")
+            return redirect('worker:my_ads')
+        ServiceAd.objects.create(worker=request.user, title=title, description=description, service_type=service_type, price=int(price))
+        messages.success(request, "E'lon yaratildi!")
+    return redirect('worker:my_ads')
+
+
+@worker_required
+def edit_ad(request, pk):
+    ad = get_object_or_404(ServiceAd, pk=pk, worker=request.user)
+    if request.method == 'POST':
+        ad.title=request.POST.get('title',ad.title).strip()
+        ad.description=request.POST.get('description',ad.description).strip()
+        ad.service_type=request.POST.get('service_type',ad.service_type)
+        ad.price=int(request.POST.get('price',ad.price))
+        ad.save()
+        messages.success(request, "E'lon yangilandi!")
+        return redirect('worker:my_ads')
+    return render(request, 'worker/ad_edit.html', {'ad': ad})
+
+
+@worker_required
+def delete_ad(request, pk):
+    if request.method == 'POST':
+        get_object_or_404(ServiceAd, pk=pk, worker=request.user).delete()
+        messages.success(request, "E'lon o'chirildi.")
+    return redirect('worker:my_ads')
+
+
+@worker_required
+def orders(request):
+    orders_list = Order.objects.filter(
+        worker=request.user,
+        status__in=[Order.Status.PENDING, Order.Status.ACCEPTED, Order.Status.IN_PROGRESS]
+    ).select_related('customer','car','service_ad').order_by('-created_at')
+    return render(request, 'worker/orders.html', {'orders': orders_list})
+
+
+@worker_required
+def accept_order(request, pk):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, pk=pk, worker=request.user)
+        if order.status == Order.Status.PENDING:
+            order.status = Order.Status.ACCEPTED
+            order.save()
+            if order.service_ad:
+                order.service_ad.is_active = False
+                order.service_ad.save()
+            messages.success(request, "Buyurtma qabul qilindi!")
+    return redirect('worker:orders')
+
+
+@worker_required
+def reject_order(request, pk):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, pk=pk, worker=request.user)
+        if order.status == Order.Status.PENDING:
+            order.status = Order.Status.REJECTED
+            order.save()
+            messages.info(request, "Buyurtma rad etildi.")
+    return redirect('worker:orders')
+
+
+@worker_required
+def complete_order(request, pk):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, pk=pk, worker=request.user)
+        if order.status == Order.Status.ACCEPTED:
+            order.status = Order.Status.COMPLETED
+            order.completed_at = timezone.now()
+            order.save()
+            if order.service_ad:
+                order.service_ad.is_active = True
+                order.service_ad.save()
+            messages.success(request, "Buyurtma yakunlandi! Tanga yig'ildi 🪙")
+    return redirect('worker:orders')
+
+
+@worker_required
+def order_history(request):
+    orders_list = Order.objects.filter(
+        worker=request.user,
+        status__in=[Order.Status.COMPLETED, Order.Status.REJECTED, Order.Status.CANCELLED]
+    ).select_related('customer','car','service_ad').prefetch_related('review').order_by('-created_at')
+    return render(request, 'worker/order_history.html', {'orders': orders_list})
+
+
+@worker_required
+def bonuses(request):
+    loyalty, _ = LoyaltyToken.objects.get_or_create(user=request.user)
+    bonuses_list = Bonus.objects.filter(is_active=True).order_by('token_cost')
+
+    # Tanga tarixi
+    from core.models import LoyaltyTransaction
+    transactions = LoyaltyTransaction.objects.filter(loyalty=loyalty).order_by('-created_at')[:10]
+
+    return render(request, 'worker/bonuses.html', {
+        'bonuses':      bonuses_list,
+        'loyalty':      loyalty,
+        'transactions': transactions,
+    })
+
+
+@worker_required
+def claim_bonus(request, pk):
+    if request.method == 'POST':
+        bonus = get_object_or_404(Bonus, pk=pk)
+        success, msg = bonus.claim(request.user)
+        if success:
+            messages.success(request, msg)
+        else:
+            messages.error(request, msg)
+    return redirect('worker:bonuses')
+
+
+@worker_required
+def profile(request):
+    if request.method == 'POST':
+        user = request.user
+        user.first_name = request.POST.get('first_name','').strip()
+        user.last_name  = request.POST.get('last_name','').strip()
+        user.phone      = request.POST.get('phone','').strip()
+        if request.FILES.get('avatar'):
+            user.avatar = request.FILES['avatar']
+        user.save()
+        messages.success(request, "Profil yangilandi!")
+        return redirect('worker:profile')
+    return render(request, 'worker/profile.html')

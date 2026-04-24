@@ -1,0 +1,58 @@
+{% extends 'accounts/base_auth.html' %}
+{% block title %}Email Tasdiqlash — OTTA{% endblock %}
+
+{% block content %}
+<div style="text-align:center;margin-bottom:24px;">
+    <div style="font-size:48px;margin-bottom:14px;">📧</div>
+    <h2 style="margin-bottom:8px;">Email Tasdiqlash</h2>
+    <p style="color:var(--muted);font-size:14px;line-height:1.6;">
+        <strong style="color:var(--accent2);">{{ request.user.email }}</strong> manziliga<br>
+        6 xonali tasdiqlash kodi yuborildi
+    </p>
+</div>
+
+<form method="post" action="{% url 'accounts:verify_email' %}">
+    {% csrf_token %}
+    <div class="code-inputs">
+        {% for i in "123456" %}
+        <input type="text" name="code_{{ forloop.counter }}" class="code-inp"
+               maxlength="1" inputmode="numeric" pattern="[0-9]"
+               id="ci{{ forloop.counter }}" autocomplete="off">
+        {% endfor %}
+    </div>
+
+    <button type="submit" class="btn-auth">
+        <i class="fa-solid fa-shield-check"></i> Tasdiqlash
+    </button>
+</form>
+
+<div style="text-align:center;margin-top:20px;">
+    <a href="{% url 'accounts:resend_code' %}"
+       style="color:var(--accent2);text-decoration:none;font-size:13px;display:inline-flex;align-items:center;gap:6px;">
+        <i class="fa-solid fa-rotate-right"></i> Yangi kod yuborish
+    </a>
+</div>
+
+<script>
+// Auto focus keyingisiga o'tish
+const inputs = document.querySelectorAll('.code-inp');
+inputs.forEach((inp, i) => {
+    inp.addEventListener('input', () => {
+        inp.classList.toggle('filled', inp.value.length > 0);
+        if (inp.value && i < inputs.length - 1) inputs[i+1].focus();
+    });
+    inp.addEventListener('keydown', e => {
+        if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i-1].focus();
+    });
+    inp.addEventListener('paste', e => {
+        const text = e.clipboardData.getData('text').replace(/\D/g,'').slice(0,6);
+        if (text.length === 6) {
+            e.preventDefault();
+            inputs.forEach((el, idx) => { el.value = text[idx] || ''; el.classList.toggle('filled', !!text[idx]); });
+            inputs[5].focus();
+        }
+    });
+});
+inputs[0].focus();
+</script>
+{% endblock %}

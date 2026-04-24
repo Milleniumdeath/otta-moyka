@@ -1,0 +1,62 @@
+{% extends 'base/panel_base.html' %}{% block title %}Buyurtmalar Tarixi{% endblock %}{% block page_title %}Buyurtmalar Tarixi{% endblock %}
+{% block sidebar_nav %}<a href="{% url 'customer:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a><a href="{% url 'customer:my_cars' %}" class="nav-item"><i class="fa-solid fa-truck-moving"></i> Mashinalarim</a><a href="{% url 'customer:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a><a href="{% url 'customer:order_history' %}" class="nav-item active"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a><a href="{% url 'customer:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a><div class="nav-section">Sozlamalar</div><a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>{% endblock %}
+{% block content %}
+<div class="table-card">
+    <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-clock-rotate-left"></i> Barcha Buyurtmalar</div></div>
+    {% if orders %}
+    <table><thead><tr><th>Ishchi</th><th>Mashina</th><th>Xizmat</th><th>Baho</th><th>Holat</th><th>Sana</th></tr></thead><tbody>
+    {% for o in orders %}<tr>
+        <td class="td-main">{{ o.worker.get_full_name }}</td>
+        <td>{{ o.car }}</td>
+        <td>{{ o.service_ad.get_service_type_display }}</td>
+        <td>
+            {% if o.status == 'completed' and not o.review %}
+            <button class="btn btn-ghost btn-sm" onclick="showReview({{ o.pk }})"><i class="fa-solid fa-star"></i> Baho ber</button>
+            {% elif o.review %}
+            <span style="color:var(--amber);">{% for i in "12345" %}{% if forloop.counter <= o.review.rating %}<i class="fa-solid fa-star fa-xs"></i>{% else %}<i class="fa-regular fa-star fa-xs"></i>{% endif %}{% endfor %}</span>
+            {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+        </td>
+        <td><span class="badge badge-{{ o.status }}"><i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}</span></td>
+        <td>{{ o.created_at|date:"d.m.Y" }}</td>
+    </tr>{% endfor %}
+    </tbody></table>
+    {% else %}<div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><p>Hali buyurtmalar yo'q</p></div>{% endif %}
+</div>
+
+<!-- REVIEW MODAL -->
+<div class="modal-overlay" id="reviewModal">
+    <div class="modal-box">
+        <div class="modal-icon"><i class="fa-solid fa-star"></i></div>
+        <div class="modal-title">Xizmatni Baholang</div>
+        <form method="post" id="reviewForm">{% csrf_token %}
+            <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px;" id="starRow">
+                {% for i in "12345" %}<i class="fa-solid fa-star" id="s{{ forloop.counter }}" onclick="setRating({{ forloop.counter }})" style="font-size:32px;cursor:pointer;color:var(--border);transition:all 0.15s;"></i>{% endfor %}
+            </div>
+            <input type="hidden" name="rating" id="ratingInput" value="5">
+            <textarea name="comment" class="form-control" rows="2" placeholder="Izoh (ixtiyoriy)..." style="margin-bottom:16px;"></textarea>
+            <div class="modal-btns">
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Saqlash</button>
+                <button type="button" class="btn btn-ghost" onclick="closeReview()"><i class="fa-solid fa-xmark"></i> Bekor</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+let rating=5;
+function setRating(r){
+    rating=r; document.getElementById('ratingInput').value=r;
+    for(let i=1;i<=5;i++){
+        document.getElementById('s'+i).style.color=i<=r?'var(--amber)':'var(--border)';
+        document.getElementById('s'+i).style.transform=i<=r?'scale(1.1)':'scale(1)';
+    }
+}
+setRating(5);
+function showReview(pk){
+    document.getElementById('reviewForm').action='/customer/orders/'+pk+'/review/';
+    document.getElementById('reviewModal').classList.add('show');
+}
+function closeReview(){document.getElementById('reviewModal').classList.remove('show');}
+</script>
+{% endblock %}

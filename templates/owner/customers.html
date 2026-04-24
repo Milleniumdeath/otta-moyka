@@ -1,0 +1,17 @@
+{% extends 'base/panel_base.html' %}{% block title %}Mijozlar{% endblock %}{% block page_title %}Mijozlar{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+{% block content %}
+<div class="table-card">
+    <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-users"></i> Barcha Mijozlar</div><span style="color:var(--muted);font-size:14px;">{{ customers.count }} ta</span></div>
+    {% if customers %}
+    <table><thead><tr><th>Mijoz</th><th>Email</th><th>Telefon</th><th>Sodiqlik</th><th>Buyurtmalar</th><th>Amal</th></tr></thead><tbody>
+    {% for c in customers %}<tr>
+        <td><div class="user-cell"><div class="u-ava green">{{ c.first_name|first|upper }}</div><span class="td-main">{{ c.get_full_name|default:"—" }}</span></div></td>
+        <td>{{ c.email }}</td><td>{{ c.phone|default:"—" }}</td>
+        <td><div class="loy-bar-wrap"><div class="loy-bar-pct">{{ c.loyalty.loyalty_percentage|default:0 }}%</div><div class="loy-bar"><div class="loy-fill" style="width:{{ c.loyalty.loyalty_percentage|default:0 }}%"></div></div></div></td>
+        <td class="td-main">{{ c.customer_orders.count }}</td>
+        <td><form method="post" action="{% url 'owner:delete_customer' c.pk %}" onsubmit="return confirm('O\'chirishni tasdiqlaysizmi?')">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i></button></form></td>
+    </tr>{% endfor %}</tbody></table>
+    {% else %}<div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-users"></i></div><p>Hali mijozlar yo'q</p></div>{% endif %}
+</div>
+{% endblock %}

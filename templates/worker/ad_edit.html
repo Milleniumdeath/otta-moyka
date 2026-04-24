@@ -1,0 +1,27 @@
+{% extends 'base/panel_base.html' %}{% block title %}E'lonni Tahrirlash{% endblock %}{% block page_title %}E'lonni Tahrirlash{% endblock %}
+{% block sidebar_nav %}<a href="{% url 'worker:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a><a href="{% url 'worker:my_ads' %}" class="nav-item active"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a><a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a><a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a><a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a><div class="nav-section">Sozlamalar</div><a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>{% endblock %}
+{% block content %}
+<div class="form-card" style="max-width:560px;">
+    <div class="form-card-title"><i class="fa-solid fa-pen-to-square"></i> E'lonni Tahrirlash</div>
+    <form method="post" action="{% url 'worker:edit_ad' ad.pk %}">{% csrf_token %}
+        <div class="form-row">
+            <div class="form-group"><label class="form-label">Xizmat turi *</label>
+                <select name="service_type" class="form-control" required>
+                    <option value="light" {% if ad.service_type == 'light' %}selected{% endif %}>🚗 Yengil mashina</option>
+                    <option value="heavy" {% if ad.service_type == 'heavy' %}selected{% endif %}>🚛 Yuk mashina</option>
+                    <option value="polish" {% if ad.service_type == 'polish' %}selected{% endif %}>✨ Polировка</option>
+                    <option value="interior" {% if ad.service_type == 'interior' %}selected{% endif %}>🪑 Salon tozalash</option>
+                    <option value="full" {% if ad.service_type == 'full' %}selected{% endif %}>💎 To'liq kompleks</option>
+                </select>
+            </div>
+            <div class="form-group"><label class="form-label">Narx (so'm) *</label><input type="number" name="price" class="form-control" value="{{ ad.price }}" min="1000" required></div>
+        </div>
+        <div class="form-group"><label class="form-label">Sarlavha *</label><input type="text" name="title" class="form-control" value="{{ ad.title }}" required></div>
+        <div class="form-group"><label class="form-label">Tavsif *</label><textarea name="description" class="form-control" rows="3" required>{{ ad.description }}</textarea></div>
+        <div style="display:flex;gap:12px;">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
+            <a href="{% url 'worker:my_ads' %}" class="btn btn-ghost"><i class="fa-solid fa-xmark"></i> Bekor</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

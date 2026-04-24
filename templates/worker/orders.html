@@ -1,0 +1,26 @@
+{% extends 'base/panel_base.html' %}{% block title %}Buyurtmalar{% endblock %}{% block page_title %}Buyurtmalar{% endblock %}
+{% block sidebar_nav %}<a href="{% url 'worker:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a><a href="{% url 'worker:my_ads' %}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a><a href="{% url 'worker:orders' %}" class="nav-item active"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a><a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a><a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a><div class="nav-section">Sozlamalar</div><a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>{% endblock %}
+{% block content %}
+<div class="table-card">
+    <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-clipboard-list"></i> Faol Buyurtmalar</div></div>
+    {% if orders %}
+    <table><thead><tr><th>Mijoz</th><th>Mashina</th><th>Xizmat</th><th>Narx</th><th>Holat</th><th>Amal</th></tr></thead><tbody>
+    {% for o in orders %}<tr>
+        <td><div class="user-cell"><div class="u-ava green">{{ o.customer.first_name|first|upper }}</div><div><div class="td-main">{{ o.customer.get_full_name|default:o.customer.email }}</div><div style="font-size:12px;color:var(--muted);">{{ o.customer.phone|default:"" }}</div></div></div></td>
+        <td>{{ o.car }}</td>
+        <td>{{ o.service_ad.get_service_type_display }}</td>
+        <td style="color:var(--cyan);font-weight:700;">{{ o.total_price|floatformat:0 }} so'm</td>
+        <td><span class="badge badge-{{ o.status }}"><i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}</span></td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            {% if o.status == 'pending' %}
+            <form method="post" action="{% url 'worker:accept_order' o.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i> Qabul</button></form>
+            <form method="post" action="{% url 'worker:reject_order' o.pk %}">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-xmark"></i> Rad</button></form>
+            {% elif o.status == 'accepted' %}
+            <form method="post" action="{% url 'worker:complete_order' o.pk %}">{% csrf_token %}<button class="btn btn-primary btn-sm"><i class="fa-solid fa-flag-checkered"></i> Yakunlash</button></form>
+            {% endif %}
+        </td>
+    </tr>{% endfor %}
+    </tbody></table>
+    {% else %}<div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div><p>Faol buyurtmalar yo'q</p></div>{% endif %}
+</div>
+{% endblock %}

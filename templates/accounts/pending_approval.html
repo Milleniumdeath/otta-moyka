@@ -1,0 +1,84 @@
+{% extends 'accounts/base_auth.html' %}
+{% block title %}Tasdiqlash Kutilmoqda — OTTA{% endblock %}
+
+{% block extra_style %}
+<style>
+.pending-icon {
+    width:88px; height:88px; border-radius:50%;
+    background:rgba(245,158,11,0.1);
+    border:2px solid rgba(245,158,11,0.3);
+    display:flex; align-items:center; justify-content:center;
+    font-size:36px; color:#f59e0b;
+    margin:0 auto 24px;
+    animation:pendingPulse 2.5s ease-in-out infinite;
+}
+@keyframes pendingPulse {
+    0%,100% { box-shadow:0 0 0 0 rgba(245,158,11,0.3); }
+    50%      { box-shadow:0 0 0 14px rgba(245,158,11,0); }
+}
+.steps-list { display:flex; flex-direction:column; gap:10px; margin:22px 0; }
+.step-row { display:flex; align-items:center; gap:13px; padding:13px 15px; border-radius:12px; border:1px solid var(--border); background:rgba(4,22,26,0.3); font-size:14px; }
+[data-theme="light"] .step-row { background:rgba(255,255,255,0.4); }
+.step-row.done   { border-color:rgba(0,232,122,0.22); }
+.step-row.active { border-color:rgba(245,158,11,0.22); background:rgba(245,158,11,0.04); }
+.s-dot { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
+.s-dot.done   { background:rgba(0,232,122,0.12); color:#00e87a; border:1px solid rgba(0,232,122,0.2); }
+.s-dot.active { background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.2); }
+.s-dot.wait   { background:rgba(107,156,186,0.06); color:var(--muted); border:1px solid var(--border); }
+.pulse-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#f59e0b; animation:blink 1.2s infinite; margin-left:5px; vertical-align:middle; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="pending-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+
+<h2 style="margin-bottom:8px;">Tasdiqlash Kutilmoqda</h2>
+<p style="text-align:center;color:var(--muted);font-size:14px;margin-bottom:6px;">
+    Moyka egasi so'rovingizni ko'rib chiqmoqda
+</p>
+<p style="text-align:center;color:var(--soft);font-size:13px;">
+    <i class="fa-solid fa-user-tie" style="color:var(--accent2);"></i>
+    {{ request.user.get_full_name|default:request.user.email }}
+    {% if request.user.phone %}
+    &nbsp;·&nbsp;
+    <i class="fa-solid fa-phone fa-xs"></i> {{ request.user.phone }}
+    {% endif %}
+</p>
+
+<div class="steps-list">
+    <div class="step-row done">
+        <div class="s-dot done"><i class="fa-solid fa-check"></i></div>
+        <span>Akkaunt yaratildi</span>
+    </div>
+    <div class="step-row done">
+        <div class="s-dot done"><i class="fa-solid fa-check"></i></div>
+        <span>Ishchi sifatida ro'yxatdan o'tildi</span>
+    </div>
+    <div class="step-row done">
+        <div class="s-dot done"><i class="fa-solid fa-check"></i></div>
+        <span>Ma'lumotlar yuborildi</span>
+    </div>
+    <div class="step-row active">
+        <div class="s-dot active"><i class="fa-solid fa-clock"></i></div>
+        <span>Moyka egasi tasdiqlashi kutilmoqda <span class="pulse-dot"></span></span>
+    </div>
+    <div class="step-row" style="opacity:0.45;">
+        <div class="s-dot wait">4</div>
+        <span>Ishchi paneliga kirish</span>
+    </div>
+</div>
+
+<div style="background:rgba(15,143,152,0.06);border:1px solid rgba(15,143,152,0.18);border-radius:12px;padding:13px 15px;font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:22px;display:flex;align-items:flex-start;gap:9px;">
+    <i class="fa-solid fa-circle-info" style="color:var(--accent2);margin-top:2px;flex-shrink:0;"></i>
+    Tasdiqlangach tizimga qayta kiring — ishchi paneliga avtomatik o'tasiz.
+</div>
+
+<a href="{% url 'accounts:logout' %}"
+   onclick="return confirm('Tizimdan chiqmoqchimisiz?')"
+   style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);color:var(--muted);text-decoration:none;font-size:14px;transition:all 0.2s;background:var(--glass);">
+    <i class="fa-solid fa-arrow-right-from-bracket"></i> Tizimdan chiqish
+</a>
+
+{% endblock %}

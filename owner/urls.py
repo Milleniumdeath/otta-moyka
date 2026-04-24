@@ -1,0 +1,27 @@
+from django.urls import path
+from . import views
+from finance import views as finance_views
+
+app_name = 'owner'
+
+urlpatterns = [
+    path('dashboard/',              views.dashboard,        name='dashboard'),
+    path('workers/',                views.workers,          name='workers'),
+    path('workers/approve/<int:pk>/', views.approve_worker, name='approve_worker'),
+    path('workers/delete/<int:pk>/',  views.delete_worker,  name='delete_worker'),
+    path('customers/',              views.customers,        name='customers'),
+    path('customers/delete/<int:pk>/', views.delete_customer, name='delete_customer'),
+    path('bonuses/',                views.bonuses,          name='bonuses'),
+    path('bonuses/create/',         views.create_bonus,     name='create_bonus'),
+    path('bonuses/edit/<int:pk>/',  views.edit_bonus,       name='edit_bonus'),
+    path('bonuses/delete/<int:pk>/',views.delete_bonus,     name='delete_bonus'),
+    path('cameras/',                views.cameras,          name='cameras'),
+    path('profile/',                views.profile,          name='profile'),
+
+    # Kirim & Chiqim
+    path('finance/',                        finance_views.finance,        name='finance'),
+    path('finance/expense/add/',            finance_views.add_expense,    name='add_expense'),
+    path('finance/income/add/',             finance_views.add_income,     name='add_income'),
+    path('finance/expense/delete/<int:pk>/',finance_views.delete_expense, name='delete_expense'),
+    path('finance/income/delete/<int:pk>/', finance_views.delete_income,  name='delete_income'),
+]

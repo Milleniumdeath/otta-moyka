@@ -1,0 +1,24 @@
+{% extends 'base/panel_base.html' %}{% block title %}Buyurtmalar Tarixi{% endblock %}{% block page_title %}Buyurtmalar Tarixi{% endblock %}
+{% block sidebar_nav %}<a href="{% url 'worker:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a><a href="{% url 'worker:my_ads' %}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a><a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a><a href="{% url 'worker:order_history' %}" class="nav-item active"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a><a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a><div class="nav-section">Sozlamalar</div><a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>{% endblock %}
+{% block content %}
+<div class="table-card">
+    <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-clock-rotate-left"></i> Barcha Buyurtmalar</div></div>
+    {% if orders %}
+    <table><thead><tr><th>Mijoz</th><th>Xizmat</th><th>Baho</th><th>Holat</th><th>Sana</th></tr></thead><tbody>
+    {% for o in orders %}<tr>
+        <td class="td-main">{{ o.customer.get_full_name|default:o.customer.email }}</td>
+        <td>{{ o.service_ad.get_service_type_display }}</td>
+        <td>
+            {% if o.review %}
+                <span style="color:var(--amber);">
+                    {% for i in "12345" %}{% if forloop.counter <= o.review.rating %}<i class="fa-solid fa-star fa-xs"></i>{% else %}<i class="fa-regular fa-star fa-xs"></i>{% endif %}{% endfor %}
+                </span>
+            {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+        </td>
+        <td><span class="badge badge-{{ o.status }}"><i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}</span></td>
+        <td>{{ o.created_at|date:"d.m.Y" }}</td>
+    </tr>{% endfor %}
+    </tbody></table>
+    {% else %}<div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-clock-rotate-left"></i></div><p>Hali buyurtmalar tarixi yo'q</p></div>{% endif %}
+</div>
+{% endblock %}

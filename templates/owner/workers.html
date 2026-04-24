@@ -1,0 +1,37 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Ishchilar{% endblock %}
+{% block page_title %}Ishchilar{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+{% block content %}
+{% if pending_workers %}
+<div class="table-card" style="border-color:rgba(245,158,11,0.25);margin-bottom:20px;">
+    <div class="table-head">
+        <div class="table-head-title" style="color:var(--amber);"><i class="fa-solid fa-hourglass-half"></i> Tasdiqlash Kutayotganlar</div>
+        <span class="badge" style="background:rgba(245,158,11,0.1);color:var(--amber);">{{ pending_workers.count }} ta</span>
+    </div>
+    <table><thead><tr><th>Ishchi</th><th>Email</th><th>Telefon</th><th>Sana</th><th>Amal</th></tr></thead><tbody>
+    {% for w in pending_workers %}<tr>
+        <td><div class="user-cell"><div class="u-ava amber">{{ w.first_name|first|upper }}</div><span class="td-main">{{ w.get_full_name|default:"—" }}</span></div></td>
+        <td>{{ w.email }}</td><td>{{ w.phone|default:"—" }}</td>
+        <td>{{ w.created_at|date:"d.m.Y" }}</td>
+        <td style="display:flex;gap:6px;">
+            <form method="post" action="{% url 'owner:approve_worker' w.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i> Tasdiqlash</button></form>
+            <form method="post" action="{% url 'owner:delete_worker' w.pk %}" onsubmit="return confirm('Rad etishni tasdiqlaysizmi?')">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-xmark"></i> Rad</button></form>
+        </td>
+    </tr>{% endfor %}</tbody></table>
+</div>
+{% endif %}
+<div class="table-card">
+    <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-users-gear"></i> Tasdiqlangan Ishchilar</div></div>
+    {% if approved_workers %}
+    <table><thead><tr><th>Ishchi</th><th>Email</th><th>Telefon</th><th>Sodiqlik</th><th>Buyurtmalar</th><th>Amal</th></tr></thead><tbody>
+    {% for w in approved_workers %}<tr>
+        <td><div class="user-cell"><div class="u-ava">{% if w.avatar %}<img src="{{ w.avatar.url }}">{% else %}{{ w.first_name|first|upper }}{% endif %}</div><div><div class="td-main">{{ w.get_full_name|default:"—" }}</div></div></div></td>
+        <td>{{ w.email }}</td><td>{{ w.phone|default:"—" }}</td>
+        <td><div class="loy-bar-wrap"><div class="loy-bar-pct">{{ w.loyalty.loyalty_percentage|default:0 }}%</div><div class="loy-bar"><div class="loy-fill" style="width:{{ w.loyalty.loyalty_percentage|default:0 }}%"></div></div></div></td>
+        <td class="td-main">{{ w.worker_orders.count }}</td>
+        <td><form method="post" action="{% url 'owner:delete_worker' w.pk %}" onsubmit="return confirm('O\'chirishni tasdiqlaysizmi?')">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i></button></form></td>
+    </tr>{% endfor %}</tbody></table>
+    {% else %}<div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-users-gear"></i></div><p>Hali ishchilar yo'q</p></div>{% endif %}
+</div>
+{% endblock %}

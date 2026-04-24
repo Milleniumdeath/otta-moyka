@@ -1,0 +1,127 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Buyurtma Berish{% endblock %}
+{% block page_title %}Mavjud E'lonlar{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'customer:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'customer:my_cars' %}" class="nav-item"><i class="fa-solid fa-truck-moving"></i> Mashinalarim</a>
+<a href="{% url 'customer:orders' %}" class="nav-item active"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
+<a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'customer:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block content %}
+
+{% if not cars %}
+<div class="alert alert-warning">
+    <i class="fa-solid fa-triangle-exclamation"></i>
+    Buyurtma berish uchun avval
+    <a href="{% url 'customer:my_cars' %}" style="color:var(--amber);font-weight:700;">mashina qo'shing</a>.
+</div>
+{% endif %}
+
+{% if ads %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+{% for ad in ads %}
+<div style="background:var(--card);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:16px;padding:24px;transition:all 0.3s;position:relative;"
+     onmouseover="this.style.borderColor='rgba(0,200,255,0.25)';this.style.transform='translateY(-3px)'"
+     onmouseout="this.style.borderColor='var(--border)';this.style.transform='translateY(0)'">
+
+    <div style="width:52px;height:52px;border-radius:14px;background:rgba(0,200,255,0.08);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--cyan);margin-bottom:16px;">
+        <i class="fa-solid {% if ad.service_type == 'heavy' %}fa-truck-moving{% elif ad.service_type == 'light' %}fa-car{% elif ad.service_type == 'polish' %}fa-wand-magic-sparkles{% elif ad.service_type == 'interior' %}fa-couch{% else %}fa-gem{% endif %}"></i>
+    </div>
+
+    <div style="font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:6px;">
+        {{ ad.get_service_type_display }}
+    </div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--text);">{{ ad.title }}</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
+        {{ ad.description|truncatechars:80 }}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="font-size:13px;color:var(--soft);">
+            <i class="fa-solid fa-user-gear fa-xs"></i> {{ ad.worker.get_full_name }}
+        </span>
+        <span style="font-size:18px;font-weight:800;color:var(--cyan);">
+            {{ ad.price|floatformat:0 }} so'm
+        </span>
+    </div>
+
+    {% if cars %}
+    <button class="btn btn-primary" style="width:100%;"
+            onclick="showOrder({{ ad.pk }}, '{{ ad.title }}', {{ ad.price }})">
+        <i class="fa-solid fa-clipboard-check"></i> Buyurtma Berish
+    </button>
+    {% else %}
+    <button class="btn btn-ghost" style="width:100%;opacity:0.5;" disabled>
+        <i class="fa-solid fa-lock"></i> Avval mashina qo'shing
+    </button>
+    {% endif %}
+</div>
+{% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+    <p>Hozirda barcha ishchilar band yoki hali e'lon bermagan</p>
+</div>
+{% endif %}
+
+<!-- BUYURTMA MODAL -->
+<div class="modal-overlay" id="orderModal">
+    <div class="modal-box" style="text-align:left;max-width:480px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+            <i class="fa-solid fa-clipboard-check" style="font-size:24px;color:var(--cyan);"></i>
+            <div class="modal-title" style="margin:0;">Buyurtma Berish</div>
+        </div>
+        <p class="modal-text" id="orderModalTitle"
+           style="text-align:left;color:var(--cyan);font-weight:700;margin-bottom:20px;font-size:16px;"></p>
+        <form method="post" id="orderForm">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Mashinangizni tanlang *</label>
+                <select name="car_id" class="form-control" required>
+                    {% for car in cars %}
+                    <option value="{{ car.pk }}">{{ car.brand }} {{ car.model }} — {{ car.plate_number }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fa-solid fa-comment-dots fa-xs"></i> Izoh (ixtiyoriy)
+                </label>
+                <textarea name="note" class="form-control" rows="3"
+                    placeholder="Qo'shimcha xohishlar, mashina holati haqida..."></textarea>
+            </div>
+            <div class="modal-btns" style="justify-content:flex-start;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-check"></i> Buyurtma Berish
+                </button>
+                <button type="button" class="btn btn-ghost" onclick="closeOrder()">
+                    <i class="fa-solid fa-xmark"></i> Bekor
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showOrder(adPk, title, price) {
+    document.getElementById('orderModalTitle').textContent =
+        title + ' — ' + price.toLocaleString() + " so'm";
+    document.getElementById('orderForm').action =
+        '/customer/orders/' + adPk + '/book/';
+    document.getElementById('orderModal').classList.add('show');
+}
+function closeOrder() {
+    document.getElementById('orderModal').classList.remove('show');
+}
+</script>
+{% endblock %}
+

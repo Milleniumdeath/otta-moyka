@@ -1,0 +1,176 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Dashboard — Mijoz{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'customer:dashboard' %}" class="nav-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'customer:my_cars' %}" class="nav-item"><i class="fa-solid fa-truck-moving"></i> Mashinalarim</a>
+<a href="{% url 'customer:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
+<a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'customer:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block extra_style %}
+<style>
+.g-card { border-radius:20px; padding:28px; position:relative; overflow:hidden; margin-bottom:16px; }
+.g-card::before { content:''; position:absolute; width:220px; height:220px; border-radius:50%; top:-60px; right:-40px; pointer-events:none; }
+.g-card.blue { background:linear-gradient(135deg,#04161a 0%,#082d33 55%,#2a4d63 100%); border:1px solid rgba(107,156,186,0.25); }
+.g-card.blue::before { background:radial-gradient(circle,rgba(107,156,186,0.2),transparent 70%); }
+.g-grid { display:grid; position:relative; z-index:1; }
+.g-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+.g-grid-4 { grid-template-columns:1fr 1fr 1fr 1fr; }
+.g-col { padding:0 22px; border-right:1px solid rgba(107,156,186,0.12); }
+.g-col:first-child { padding-left:0; }
+.g-col:last-child  { padding-right:0; border-right:none; }
+.g-lbl { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px; color:rgba(107,156,186,0.55); margin-bottom:10px; }
+.g-val { font-family:'Bebas Neue',sans-serif; font-size:44px; color:#fff; line-height:1; margin-bottom:4px; }
+.g-val.dim   { font-size:34px; color:#6b9cba; }
+.g-val.green { color:#00e87a !important; font-size:36px; }
+.g-val.red   { color:#ff4d6a !important; font-size:36px; }
+.g-val.amber { color:#f59e0b !important; font-size:36px; }
+.g-val.teal  { color:#0f8f98 !important; font-size:36px; }
+.g-sub { font-size:12px; color:rgba(107,156,186,0.4); margin-bottom:12px; }
+.g-badge { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+.g-badge.blue { background:rgba(107,156,186,0.15); border:1px solid rgba(107,156,186,0.25); color:#6b9cba; }
+.g-badge.green { background:rgba(0,232,122,0.12); border:1px solid rgba(0,232,122,0.2); color:#00e87a; }
+
+.g-chart { background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; padding:24px; margin-bottom:16px; }
+.g-chart-title { font-size:15px; font-weight:700; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.g-chart-title i { color:var(--accent2); }
+.bar-area { display:flex; align-items:flex-end; gap:8px; height:120px; border-bottom:1px solid var(--border2); }
+.bar-col  { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+.bar-body { width:100%; border-radius:6px 6px 0 0; min-height:3px; position:relative; background:linear-gradient(180deg,#6b9cba,#2a4d63); }
+.bar-body:hover { filter:brightness(1.3); cursor:default; }
+.bar-body:hover::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%); background:var(--card-s); border:1px solid var(--border); color:var(--accent2); font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap; z-index:10; }
+.bar-lbl  { font-size:10px; color:var(--muted); margin-top:6px; }
+
+.g-list-card { background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.g-list-head { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.g-list-title { font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
+.g-list-title i { color:var(--accent2); }
+.g-row { border-bottom:1px solid var(--border2); padding:14px 20px; display:flex; align-items:center; gap:16px; transition:background 0.2s; flex-wrap:wrap; }
+.g-row:last-child { border-bottom:none; }
+.g-row:hover { background:rgba(107,156,186,0.04); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- 1: SARF + STATISTIKA — bitta karta -->
+<div class="g-card blue">
+    <div class="g-grid g-grid-3" style="margin-bottom:24px;">
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-cart-shopping"></i> Jami sarf</div>
+            <div class="g-val">{{ total_spent|floatformat:0 }}</div>
+            <div class="g-sub">so'm · barcha vaqt</div>
+            <div class="g-badge blue"><i class="fa-solid fa-receipt"></i> {{ completed_orders }} ta buyurtma yakunlandi</div>
+        </div>
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-calendar"></i> Bu oylik sarf</div>
+            <div class="g-val dim">{{ monthly_spent|floatformat:0 }}</div>
+            <div class="g-sub">so'm</div>
+        </div>
+        <div class="g-col">
+            <div class="g-lbl"><i class="fa-solid fa-coins"></i> Tangalar</div>
+            <div class="g-val dim">{{ loyalty_balance }}</div>
+            <div class="g-sub">sodiqlik tangasi</div>
+        </div>
+    </div>
+
+    <!-- Buyurtma statistikasi -->
+    <div style="border-top:1px solid rgba(107,156,186,0.12);padding-top:20px;">
+        <div class="g-grid g-grid-4">
+            <div class="g-col">
+                <div class="g-lbl"><i class="fa-solid fa-clipboard-list"></i> Jami buyurtmalar</div>
+                <div class="g-val dim" style="font-size:40px;color:#fff;">{{ total_orders }}</div>
+            </div>
+            <div class="g-col">
+                <div class="g-lbl"><i class="fa-solid fa-circle-check"></i> Yakunlangan</div>
+                <div class="g-val green">{{ completed_orders }}</div>
+            </div>
+            <div class="g-col">
+                <div class="g-lbl"><i class="fa-solid fa-truck-moving"></i> Mashinalar</div>
+                <div class="g-val teal">{{ cars_count }}</div>
+            </div>
+            <div class="g-col">
+                <div class="g-lbl"><i class="fa-solid fa-coins"></i> Tangalar</div>
+                <div class="g-val amber">{{ loyalty_balance }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2: HAFTALIK GRAFIK -->
+<div class="g-chart">
+    <div class="g-chart-title">
+        <i class="fa-solid fa-chart-bar"></i> Oxirgi 7 kunlik sarf
+        <span style="margin-left:auto;font-size:12px;color:var(--muted);font-weight:400;display:flex;align-items:center;gap:6px;">
+            <span style="width:10px;height:10px;border-radius:2px;background:linear-gradient(135deg,#6b9cba,#2a4d63);display:inline-block;"></span> Sarf (so'm)
+        </span>
+    </div>
+    <div class="bar-area">
+        {% for d in week_data %}
+        <div class="bar-col">
+            <div class="bar-body" data-val="{{ d.spent }}" data-tip="{{ d.spent|floatformat:0 }} so'm" style="height:3px;"></div>
+            <div class="bar-lbl">{{ d.date }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 3: FAOL BUYURTMALAR -->
+{% if active_orders %}
+<div class="g-list-card">
+    <div class="g-list-head">
+        <div class="g-list-title"><i class="fa-solid fa-hourglass-half"></i> Faol Buyurtmalar</div>
+        <a href="{% url 'customer:orders' %}" class="btn btn-ghost btn-sm">E'lonlar <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+    {% for o in active_orders %}
+    <div class="g-row">
+        <div style="width:40px;height:40px;border-radius:12px;background:rgba(107,156,186,0.1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--accent2);flex-shrink:0;">
+            <i class="fa-solid fa-truck-moving"></i>
+        </div>
+        <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">{{ o.service_ad.get_service_type_display }}</div>
+            <div style="font-size:12px;color:var(--muted);display:flex;gap:12px;">
+                <span><i class="fa-solid fa-user-gear fa-xs"></i> {{ o.worker.get_full_name }}</span>
+                <span><i class="fa-solid fa-car fa-xs"></i> {{ o.car }}</span>
+            </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;">
+            <span class="badge badge-{{ o.status }}"><i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}</span>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">{{ o.created_at|date:"d.m.Y H:i" }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="g-list-card">
+    <div class="g-list-head">
+        <div class="g-list-title"><i class="fa-solid fa-hourglass-half"></i> Faol Buyurtmalar</div>
+        <a href="{% url 'customer:orders' %}" class="btn btn-ghost btn-sm">E'lonlar <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+    <div class="empty-state" style="padding:36px 20px;">
+        <div class="empty-icon"><i class="fa-solid fa-inbox"></i></div>
+        <p>Faol buyurtmalar yo'q — <a href="{% url 'customer:orders' %}" style="color:var(--accent2);">E'lonlarni ko'ring</a></p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const bars = document.querySelectorAll('.bar-body[data-val]');
+    const vals = [...bars].map(b => parseInt(b.dataset.val) || 0);
+    const mx   = Math.max(...vals, 1);
+    bars.forEach(b => {
+        const v = parseInt(b.dataset.val) || 0;
+        b.style.height = (v > 0 ? Math.max((v / mx) * 108, 8) : 3) + 'px';
+    });
+});
+</script>
+{% endblock %}
