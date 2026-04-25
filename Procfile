@@ -1,1 +1,1 @@
-web: python manage.py migrate --run-syncdb && python manage.py collectstatic --noinput && daphne automoyka.asgi:application --port $PORT --bind 0.0.0.0
+web: python manage.py migrate --run-syncdb && python manage.py shell -c "from django.contrib.sites.models import Site; Site.objects.update_or_create(id=1, defaults={'domain':'otta-moyka.onrender.com','name':'OTTA'})" && python manage.py collectstatic --noinput && daphne automoyka.asgi:application --port $PORT --bind 0.0.0.0
