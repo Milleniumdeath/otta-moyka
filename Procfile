@@ -1,1 +1,1 @@
-web: python manage.py migrate && python manage.py shell -c "from accounts.models import User; User.objects.filter(email='admin@gmail.com').exists() or User.objects.create_superuser(username='milleniumdeath90@gmail.com', email='milleniumdeath90@gmail.com', password='dilshod1007!', role='owner', is_approved=True, email_verified=True)" && daphne automoyka.asgi:application --port $PORT --bind 0.0.0.0
+web: python manage.py migrate --run-syncdb && python manage.py collectstatic --noinput && daphne automoyka.asgi:application --port $PORT --bind 0.0.0.0
