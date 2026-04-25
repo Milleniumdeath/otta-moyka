@@ -142,6 +142,9 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_REQUIRED = False
+
 # ── SESSIYA ──
 SESSION_COOKIE_AGE     = 600
 SESSION_SAVE_EVERY_REQUEST = True
@@ -167,3 +170,5 @@ LANGUAGE_CODE = 'uz'
 TIME_ZONE     = 'Asia/Tashkent'
 USE_I18N      = True
 USE_TZ        = True
+
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.OttaSocialAdapter'
