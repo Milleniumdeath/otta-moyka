@@ -1,0 +1,206 @@
+{% extends "base/panel_base.html" %}
+{% block title %}Buyurtma Berish{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <h2><i class="fas fa-shopping-cart"></i> Buyurtma Berish</h2>
+  <a href="{% url 'customer:orders' %}" class="btn-outline">
+    <i class="fas fa-arrow-left"></i> Orqaga
+  </a>
+</div>
+
+<!-- Xizmat haqida ma'lumot -->
+<div class="service-info-card">
+  <div class="si-left">
+    <span class="si-badge">{{ ad.get_service_type_display }}</span>
+    <h3>{{ ad.worker.get_full_name }}</h3>
+  </div>
+  <div class="si-right">
+    <span class="si-price">{{ ad.price|floatformat:0 }} so'm</span>
+  </div>
+</div>
+
+<!-- Ishchi ish jadvali -->
+{% if schedules %}
+<div class="schedule-info">
+  <h4><i class="fas fa-clock"></i> Ishchi ish vaqti:</h4>
+  <div class="schedule-badges">
+    {% for s in schedules %}
+    <span class="sched-badge">
+      {{ s.get_weekday_display }} {{ s.start_time|time:"H:i" }}–{{ s.end_time|time:"H:i" }}
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Buyurtma formasi -->
+<form method="post" class="order-form">
+  {% csrf_token %}
+
+  <!-- Mashina tanlash -->
+  <div class="form-group">
+    <label><i class="fas fa-car"></i> Qaysi mashina uchun?</label>
+    <div class="car-select">
+      {% for car in cars %}
+      <label class="car-option">
+        <input type="radio" name="car_id" value="{{ car.pk }}"
+               {% if forloop.first %}checked{% endif %}>
+        <div class="car-card">
+          {% if car.image %}
+            <img src="{{ car.image.url }}" alt="{{ car.brand }}">
+          {% else %}
+            <div class="car-icon"><i class="fas fa-car-side fa-2x"></i></div>
+          {% endif %}
+          <div class="car-info">
+            <strong>{{ car.brand }} {{ car.model }}</strong>
+            <span>{{ car.plate_number }}</span>
+          </div>
+        </div>
+      </label>
+      {% empty %}
+      <div class="no-cars">
+        <i class="fas fa-car"></i>
+        <p>Mashina qo'shilmagan.</p>
+        <a href="{% url 'customer:car_add' %}" class="btn-sm btn-primary">Mashina qo'shish</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Vaqt tanlash -->
+  <div class="form-group">
+    <label><i class="fas fa-calendar-alt"></i> Buyurtma vaqtini tanlang</label>
+    <div class="time-options">
+      <!-- Hozir buyurtma -->
+      <label class="time-option">
+        <input type="radio" name="time_type" value="now" checked
+               onchange="toggleScheduled(false)">
+        <div class="time-card active-card">
+          <i class="fas fa-bolt fa-lg" style="color:var(--accent2)"></i>
+          <span>Hozir</span>
+          <small>Ishchi hozir qabul qiladi</small>
+        </div>
+      </label>
+      <!-- Oldindan vaqt -->
+      <label class="time-option">
+        <input type="radio" name="time_type" value="scheduled"
+               onchange="toggleScheduled(true)">
+        <div class="time-card">
+          <i class="fas fa-calendar-check fa-lg" style="color:var(--accent2)"></i>
+          <span>Vaqt belgilash</span>
+          <small>Kelajakda buyurtma</small>
+        </div>
+      </label>
+    </div>
+    <!-- Vaqt input -->
+    <div id="scheduledInput" style="display:none; margin-top:14px;">
+      {{ form.scheduled_time }}
+      <small style="color:var(--muted)">
+        <i class="fas fa-info-circle"></i>
+        Ishchining ish vaqtida bo'lishi kerak
+      </small>
+    </div>
+  </div>
+
+  <!-- Izoh -->
+  <div class="form-group">
+    <label><i class="fas fa-comment"></i> Izoh (ixtiyoriy)</label>
+    {{ form.note }}
+  </div>
+
+  {% if form.errors %}
+  <div class="error-box">{{ form.errors }}</div>
+  {% endif %}
+
+  <button type="submit" class="btn-primary full-width" {% if not cars %}disabled{% endif %}>
+    <i class="fas fa-paper-plane"></i> Buyurtma Berish
+  </button>
+</form>
+
+<script>
+function toggleScheduled(show) {
+  const el = document.getElementById('scheduledInput');
+  el.style.display = show ? 'block' : 'none';
+  const input = el.querySelector('input');
+  if (input) {
+    if (!show) { input.value = ''; }
+    input.name = show ? 'scheduled_time' : '';
+  }
+}
+
+// Minimal vaqt: hozirdan 30 daqiqa keyin
+const now = new Date(Date.now() + 30 * 60 * 1000);
+const pad = n => String(n).padStart(2, '0');
+const minVal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+const dtInput = document.querySelector('#scheduledInput input');
+if (dtInput) {
+  dtInput.min = minVal;
+  dtInput.value = minVal;
+}
+</script>
+
+<style>
+.service-info-card {
+  background: var(--bg2); border: 1px solid var(--accent);
+  border-radius: 14px; padding: 20px 24px;
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px;
+}
+.si-badge {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #fff; padding: 3px 12px; border-radius: 20px; font-size: 12px;
+  display: inline-block; margin-bottom: 6px;
+}
+.si-right .si-price { font-size: 22px; font-weight: 800; color: var(--accent2); }
+.schedule-info {
+  background: rgba(11,110,116,0.1);
+  border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+}
+.schedule-info h4 { color: var(--text); font-size: 13px; margin-bottom: 8px; }
+.schedule-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+.sched-badge {
+  background: var(--muted); color: var(--text);
+  padding: 4px 12px; border-radius: 20px; font-size: 12px;
+}
+.order-form { background: var(--bg2); border: 1px solid var(--muted);
+  border-radius: 14px; padding: 24px; }
+.form-group { margin-bottom: 22px; }
+.form-group label { display: block; color: var(--text); margin-bottom: 10px; font-weight: 600; font-size: 14px; }
+.car-select { display: flex; flex-wrap: wrap; gap: 12px; }
+.car-option input[type=radio] { display: none; }
+.car-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg); border: 2px solid var(--muted);
+  border-radius: 10px; padding: 12px 16px; cursor: pointer; transition: all 0.2s;
+}
+.car-option input:checked + .car-card { border-color: var(--accent2); background: rgba(15,143,152,0.1); }
+.car-card img { width: 48px; height: 40px; object-fit: cover; border-radius: 6px; }
+.car-icon { width: 48px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.car-info strong { display: block; font-size: 14px; color: var(--text); }
+.car-info span { font-size: 12px; color: var(--muted); }
+.time-options { display: flex; gap: 12px; }
+.time-option input[type=radio] { display: none; }
+.time-card {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--bg); border: 2px solid var(--muted);
+  border-radius: 12px; padding: 16px 24px; cursor: pointer; transition: all 0.2s;
+}
+.time-card span { font-weight: 600; font-size: 14px; color: var(--text); }
+.time-card small { font-size: 11px; color: var(--muted); }
+.time-option input:checked + .time-card { border-color: var(--accent2); background: rgba(15,143,152,0.1); }
+#scheduledInput input {
+  width: 100%; background: var(--bg); border: 1px solid var(--muted);
+  border-radius: 8px; padding: 10px 12px; color: var(--text);
+  color-scheme: dark;
+}
+.order-form textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--muted);
+  border-radius: 8px; padding: 10px 12px; color: var(--text); resize: vertical;
+}
+.no-cars { text-align: center; padding: 20px; color: var(--muted); }
+.error-box { background: rgba(231,76,60,0.15); border-left: 3px solid #e74c3c;
+  padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; color: #e74c3c; font-size: 13px; }
+.full-width { width: 100%; justify-content: center; margin-top: 4px; }
+</style>
+{% endblock %}

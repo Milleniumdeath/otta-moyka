@@ -1,11 +1,12 @@
+from django.db.models import Sum
+from core.models import Order, Bonus, LoyaltyToken, Review
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum
 from django.utils import timezone
-from core.models import Order, Bonus, LoyaltyToken, Review
+from worker.models import ServiceAd, WorkSchedule
 from customer.models import Car
-from worker.models import ServiceAd
+from customer.forms import *
 
 
 def customer_required(view_func):
@@ -105,9 +106,38 @@ def delete_car(request, pk):
 
 @customer_required
 def orders(request):
-    ads  = ServiceAd.objects.filter(is_active=True).select_related('worker')
+    """Mijoz buyurtma berish sahifasi - mashina turiga mos e'lonlar"""
+    from worker.models import ServiceAd
+    from customer.models import Car
+
     cars = Car.objects.filter(owner=request.user)
-    return render(request, 'customer/orders.html', {'ads': ads, 'cars': cars})
+
+    # Tanlangan mashina (default: birinchisi)
+    selected_car_id = request.GET.get('car_id')
+    selected_car = None
+
+    if selected_car_id:
+        selected_car = cars.filter(pk=selected_car_id).first()
+    elif cars.exists():
+        selected_car = cars.first()
+
+    # Mashina turiga qarab e'lonlarni filtrlaymiz
+    ads = ServiceAd.objects.filter(is_active=True).select_related('worker')
+
+    if selected_car:
+        if selected_car.car_type == 'heavy':
+            # Yuk mashina faqat "heavy" e'lonlarni ko'radi
+            ads = ads.filter(service_type='heavy')
+        else:
+            # Yengil mashina "heavy" e'lonlarni ko'rmaydi
+            ads = ads.exclude(service_type='heavy')
+
+    context = {
+        'cars':         cars,
+        'selected_car': selected_car,
+        'ads':          ads,
+    }
+    return render(request, 'customer/orders.html', context)
 
 
 @customer_required
@@ -115,16 +145,58 @@ def book_order(request, ad_pk):
     if request.method == 'POST':
         ad     = get_object_or_404(ServiceAd, pk=ad_pk, is_active=True)
         car_id = request.POST.get('car_id')
-        note   = request.POST.get('note','').strip()
+        note   = request.POST.get('note', '').strip()
+        scheduled = request.POST.get('scheduled_time')  # Qo‘shildi
+
         if not car_id:
             messages.error(request, "Mashina tanlang.")
             return redirect('customer:orders')
+
         car = get_object_or_404(Car, pk=car_id, owner=request.user)
-        Order.objects.create(
-            customer=request.user, worker=ad.worker, car=car,
-            service_ad=ad, note=note, total_price=ad.price,
+
+        # ✅ Mashina turiga moslik tekshiruvi
+        if ad.service_type == 'heavy' and car.car_type != 'heavy':
+            messages.error(request, "Bu e'lon faqat yuk mashinalar uchun!")
+            return redirect('customer:orders')
+        if ad.service_type != 'heavy' and car.car_type == 'heavy':
+            messages.error(request, "Yuk mashina uchun faqat 'Yuk transport' e'lonlaridan buyurtma bering!")
+            return redirect('customer:orders')
+
+        # ✅ Ish vaqti tekshiruvi (agar vaqt berilgan bo‘lsa)
+        if scheduled:
+            from datetime import datetime
+            scheduled_dt = datetime.fromisoformat(scheduled)
+            weekday = scheduled_dt.weekday()
+            schedule = WorkSchedule.objects.filter(
+                worker=ad.worker,
+                weekday=weekday,
+                is_active=True
+            ).first()
+            if not schedule:
+                messages.warning(request, "Ishchi bu kuni ishlamaydi. Boshqa kun tanlang.")
+                return redirect('customer:orders')
+            if not (schedule.start_time <= scheduled_dt.time() <= schedule.end_time):
+                messages.warning(request,
+                    f"Ishchi bu kuni {schedule.start_time.strftime('%H:%M')}–"
+                    f"{schedule.end_time.strftime('%H:%M')} oralig'ida ishlaydi.")
+                return redirect('customer:orders')
+
+        order = Order.objects.create(
+            customer=request.user,
+            worker=ad.worker,
+            car=car,
+            service_ad=ad,
+            note=note,
+            total_price=ad.price,
             status=Order.Status.PENDING,
+            scheduled_time=scheduled,   # ✅ saqlash
         )
+
+        # ✅ Agar zudlik bilan bo‘lsa, e'lonni nofaol qilish
+        if not scheduled:
+            ad.is_active = False
+            ad.save()
+
         messages.success(request, "Buyurtma berildi! Ishchi tasdiqlashini kuting.")
     return redirect('customer:order_history')
 

@@ -58,6 +58,10 @@ class Order(models.Model):
         default=0,
         verbose_name=_("Narx (so'm)")
     )
+    scheduled_time = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='Buyurtma vaqti'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -69,6 +73,16 @@ class Order(models.Model):
 
     def __str__(self):
         return f"#{self.pk} | {self.customer} → {self.worker} | {self.get_status_display()}"
+
+    def is_scheduled(self):
+        return self.scheduled_time is not None
+
+    def get_display_time(self):
+        from django.utils import timezone
+        if self.scheduled_time:
+            local = timezone.localtime(self.scheduled_time)
+            return local.strftime("%d-%m-%Y %H:%M")
+        return "Hozir"
 
     @property
     def is_completed(self):
@@ -282,39 +296,6 @@ class BonusClaim(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.bonus.name}"
-
-class Notification(models.Model):
-    """Bildirishnomalar modeli"""
-
-    class Type(models.TextChoices):
-        NEW_ORDER       = 'new_order',       'Yangi buyurtma'
-        ORDER_ACCEPT    = 'order_accept',    'Buyurtma qabul qilindi'
-        ORDER_REJECT    = 'order_reject',    'Buyurtma rad etildi'
-        ORDER_DONE      = 'order_done',      'Buyurtma yakunlandi'
-        NEW_WORKER      = 'new_worker',      "Yangi ishchi so'rovi"
-        WORKER_APPROVED = 'worker_approved', 'Ishchi tasdiqlandi'
-        BONUS_CLAIMED   = 'bonus_claimed',   'Bonus olindi'
-
-    user = models.ForeignKey(
-        'accounts.User', on_delete=models.CASCADE,
-        related_name='notifications', verbose_name='Foydalanuvchi'
-    )
-    notif_type = models.CharField(max_length=20, choices=Type.choices)
-    title      = models.CharField(max_length=100)
-    message    = models.TextField()
-    icon       = models.CharField(max_length=50, default='fa-bell')
-    color      = models.CharField(max_length=20, default='cyan')
-    url        = models.CharField(max_length=200, default='#', blank=True)
-    is_read    = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'Bildirishnoma'
-        verbose_name_plural = 'Bildirishnomalar'
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"{self.user} — {self.title}"
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _

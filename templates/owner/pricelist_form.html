@@ -1,0 +1,68 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Narx Qo'shish{% endblock %}
+{% block page_title %}Narx Qo'shish{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+
+<div class="page-header">
+  <h2><i class="fas fa-tag"></i> Narx Belgilash</h2>
+  <a href="{% url 'owner:pricelist' %}" class="btn-outline">
+    <i class="fas fa-arrow-left"></i> Orqaga
+  </a>
+</div>
+
+<div class="form-card">
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+      <label>Xizmat turi</label>
+      {{ form.service_type }}
+    </div>
+    <div class="form-row three-col">
+      <div class="form-group">
+        <label><i class="fas fa-arrow-down" style="color:#2ecc71"></i> Minimal narx</label>
+        {{ form.min_price }}
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-star" style="color:var(--accent2)"></i> Tavsiya etilgan</label>
+        {{ form.recommended_price }}
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-arrow-up" style="color:#e74c3c"></i> Maksimal narx</label>
+        {{ form.max_price }}
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Tavsif (ixtiyoriy)</label>
+      {{ form.description }}
+    </div>
+    <div class="form-group check-group">
+      {{ form.is_active }}
+      <label>Faol (ishchilar ko'rishi uchun)</label>
+    </div>
+    {% if form.errors %}
+      <div class="error-box">{{ form.errors }}</div>
+    {% endif %}
+    <button type="submit" class="btn-primary full-width">
+      <i class="fas fa-save"></i> Saqlash
+    </button>
+  </form>
+</div>
+
+<style>
+.form-card { background: var(--bg2); border: 1px solid var(--muted);
+  border-radius: 14px; padding: 28px; max-width: 560px; margin: 20px auto; }
+.form-row.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; color: var(--text); margin-bottom: 6px; font-size: 13px; }
+.form-group select, .form-group input, .form-group textarea {
+  width: 100%; background: var(--bg); border: 1px solid var(--muted);
+  border-radius: 8px; padding: 10px 12px; color: var(--text); }
+.check-group { display: flex; align-items: center; gap: 10px; }
+.check-group input { width: auto; }
+.check-group label { margin: 0; }
+.error-box { background: rgba(231,76,60,0.15); border-left: 3px solid #e74c3c;
+  padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; color: #e74c3c; font-size: 13px; }
+.full-width { width: 100%; justify-content: center; }
+</style>
+{% endblock %}
+

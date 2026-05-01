@@ -1,0 +1,239 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Ish Jadvalim{% endblock %}
+{% block page_title %}Ish Jadvalim{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'worker:dashboard' %}" class="nav-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'worker:my_ads' %}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a>
+<a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar{% if pending_count %} <span class="nav-badge">{{ pending_count }}</span>{% endif %}</a>
+<a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'worker:schedule_list' %}" class="nav-item"><i class="fa-solid fa-calendar-alt"></i> Ish Jadvalim</a>
+<a href="{% url 'worker:scheduled_orders' %}" class="nav-item"><i class="fa-solid fa-calendar-check"></i> Rejalashtirilgan</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block content %}
+
+
+
+<style>
+  /* ── Page header ── */
+  .sch-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .sch-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sch-header h2 i { color: var(--accent2); }
+
+  /* ── Info banner ── */
+  .info-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(11,110,116,0.12);
+    border: 1px solid rgba(15,143,152,0.3);
+    border-radius: 10px;
+    padding: 12px 18px;
+    margin-bottom: 28px;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .info-banner i { color: var(--accent2); font-size: 15px; flex-shrink: 0; }
+
+  /* ── Grid ── */
+  .sch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 14px;
+  }
+
+  /* ── Karta ── */
+  .sch-card {
+    background: var(--bg2);
+    border: 1px solid var(--muted);
+    border-radius: 14px;
+    padding: 20px 16px;
+    text-align: center;
+    position: relative;
+    transition: border-color .2s, box-shadow .2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-height: 160px;
+  }
+  .sch-card.has-schedule {
+    border-color: rgba(15,143,152,0.5);
+    box-shadow: 0 0 16px rgba(15,143,152,0.12);
+  }
+  .sch-card:hover { border-color: var(--accent2); }
+
+  /* Faollik nuqtasi */
+  .dot {
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+  }
+  .dot.on  { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
+  .dot.off { background: #e74c3c; }
+
+  /* Kun nomi */
+  .sch-day {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent2);
+    letter-spacing: .5px;
+  }
+
+  /* Vaqt */
+  .sch-time {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .sch-time small {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Bo'sh holat */
+  .sch-empty {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Tugmalar */
+  .btn-add {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--accent);
+    color: var(--accent2);
+    background: transparent;
+    cursor: pointer;
+    transition: all .2s;
+    text-decoration: none;
+  }
+  .btn-add:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .btn-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all .2s;
+    text-decoration: none;
+  }
+  .btn-toggle.pause {
+    background: rgba(241,196,15,0.15);
+    color: #f1c40f;
+    border: 1px solid rgba(241,196,15,0.3);
+  }
+  .btn-toggle.pause:hover { background: rgba(241,196,15,0.3); }
+  .btn-toggle.play {
+    background: rgba(46,204,113,0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46,204,113,0.3);
+  }
+  .btn-toggle.play:hover { background: rgba(46,204,113,0.3); }
+
+  /* Header tugma */
+  .btn-new {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity .2s, transform .2s;
+  }
+  .btn-new:hover { opacity: .88; transform: translateY(-1px); }
+</style>
+
+<div class="sch-header">
+  <h2><i class="fa-solid fa-calendar-alt"></i> Ish Jadvalim</h2>
+  <a href="{% url 'worker:schedule_create' %}" class="btn-new">
+    <i class="fa-solid fa-plus"></i> Kun Qo'shish
+  </a>
+</div>
+
+<div class="info-banner">
+  <i class="fa-solid fa-circle-info"></i>
+  Ish vaqtingizni belgilang. Faqat shu vaqtlarda mijozlar buyurtma bera oladi.
+</div>
+
+<div class="sch-grid">
+  {% for day in schedule_days %}
+  <div class="sch-card {% if day.schedule %}has-schedule{% endif %}">
+
+    {% if day.schedule %}
+      <div class="dot {% if day.schedule.is_active %}on{% else %}off{% endif %}"></div>
+    {% endif %}
+
+    <div class="sch-day">{{ day.day_name }}</div>
+
+    {% if day.schedule %}
+      <div class="sch-time">
+        {{ day.schedule.start_time|time:"H:i" }}
+        <small>dan</small>
+        {{ day.schedule.end_time|time:"H:i" }}
+        <small>gacha</small>
+      </div>
+
+      <a href="{% url 'worker:schedule_toggle' day.schedule.pk %}"
+         class="btn-toggle {% if day.schedule.is_active %}pause{% else %}play{% endif %}">
+        {% if day.schedule.is_active %}
+          <i class="fa-solid fa-pause"></i> Dam olish
+        {% else %}
+          <i class="fa-solid fa-play"></i> Yoqish
+        {% endif %}
+      </a>
+
+    {% else %}
+      <i class="fa-regular fa-calendar-xmark" style="font-size:28px;color:var(--muted);margin:4px 0;"></i>
+      <span class="sch-empty">Belgilanmagan</span>
+      <a href="{% url 'worker:schedule_create' %}?day={{ day.day_num }}" class="btn-add">
+        <i class="fa-solid fa-plus"></i> Qo'shish
+      </a>
+    {% endif %}
+
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

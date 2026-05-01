@@ -1,6 +1,52 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from accounts.models import User
+from django.db import models
+from accounts.models import User
+from django.core.exceptions import ValidationError
+
+class WorkSchedule(models.Model):
+    """Ishchi haftalik ish jadvalini belgilaydi"""
+
+    class Weekday(models.IntegerChoices):
+        MONDAY    = 0, 'Dushanba'
+        TUESDAY   = 1, 'Seshanba'
+        WEDNESDAY = 2, 'Chorshanba'
+        THURSDAY  = 3, 'Payshanba'
+        FRIDAY    = 4, 'Juma'
+        SATURDAY  = 5, 'Shanba'
+        SUNDAY    = 6, 'Yakshanba'
+
+    worker     = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='schedules',
+        verbose_name='Ishchi'
+    )
+    weekday    = models.IntegerField(
+        choices=Weekday.choices,
+        verbose_name='Hafta kuni'
+    )
+    start_time = models.TimeField(verbose_name='Boshlanish vaqti')
+    end_time   = models.TimeField(verbose_name='Tugash vaqti')
+    is_active  = models.BooleanField(default=True, verbose_name='Ish kuni')
+
+    class Meta:
+        verbose_name = 'Ish jadvali'
+        verbose_name_plural = 'Ish jadvallari'
+        unique_together = ('worker', 'weekday')
+        ordering = ['weekday']
+
+    def __str__(self):
+        return f"{self.worker.get_full_name()} — {self.get_weekday_display()} {self.start_time}–{self.end_time}"
+
+    def is_working_now(self):
+        """Hozir ishchi ish vaqtida ekanligini tekshiradi"""
+        from django.utils import timezone
+        now = timezone.localtime()
+        if now.weekday() != self.weekday:
+            return False
+        return self.start_time <= now.time() <= self.end_time
+
 
 
 class ServiceAd(models.Model):
@@ -39,6 +85,31 @@ class ServiceAd(models.Model):
         verbose_name = _("Xizmat e'loni")
         verbose_name_plural = _("Xizmat e'lonlari")
         ordering = ['-created_at']
+
+    def clean(self):
+        """Narx egasi belgilagan chegarada ekanligini tekshiradi"""
+        try:
+            from owner.models import PriceList
+            pricelist = PriceList.objects.filter(
+                service_type=self.service_type,
+                is_active=True
+            ).first()
+
+            if pricelist:
+                if self.price < pricelist.min_price:
+                    raise ValidationError(
+                        f"Narx {pricelist.min_price:,} so'mdan kam bo'lmasligi kerak!"
+                    )
+                if self.price > pricelist.max_price:
+                    raise ValidationError(
+                        f"Narx {pricelist.max_price:,} so'mdan oshmasligi kerak!"
+                    )
+        except ImportError:
+            pass
+
+    def save(self, *args, **kwargs):
+        # self.full_clean()  # save dan oldin clean() chaqiriladi
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.worker.get_full_name()} — {self.get_service_type_display()}"

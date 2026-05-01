@@ -4,6 +4,10 @@ from . import views
 app_name = 'worker'
 
 urlpatterns = [
+    path('schedule/',              views.schedule_list,      name='schedule_list'),
+    path('schedule/create/',       views.schedule_create,    name='schedule_create'),
+    path('schedule/<int:pk>/toggle/', views.schedule_toggle, name='schedule_toggle'),
+    path('orders/scheduled/',      views.scheduled_orders,   name='scheduled_orders'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('ads/', views.my_ads, name='my_ads'),
     path('ads/create/', views.create_ad, name='create_ad'),

@@ -1,0 +1,348 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Narx Ro'yxati{% endblock %}
+{% block page_title %}Narx Ro'yxati{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;">
+  <div>
+    <h2 style="font-family: 'Bebas Neue', sans-serif; font-size: 28px; letter-spacing: 2px; margin: 0; color: var(--text);">
+      <i class="fas fa-tags" style="color: var(--accent2); margin-right: 12px;"></i>Narx Ro‘yxati
+    </h2>
+    <p style="color: var(--muted); font-size: 14px; margin: 6px 0 0;">Xizmat turlari bo‘yicha minimal, tavsiya etilgan va maksimal narxlarni belgilang</p>
+  </div>
+  <a href="{% url 'owner:pricelist_create' %}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border-radius: 12px; text-decoration: none; font-weight: 600; font-size: 14px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(15,143,152,0.3);">
+    <i class="fas fa-plus"></i> Narx Qo‘shish
+  </a>
+</div>
+
+<!-- Info Banner -->
+<div style="background: rgba(15,143,152,0.06); border: 1px solid rgba(15,143,152,0.2); border-radius: 16px; padding: 18px 24px; margin-bottom: 32px; display: flex; align-items: center; gap: 14px; backdrop-filter: blur(12px);">
+  <div style="width: 44px; height: 44px; background: rgba(15,143,152,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+    <i class="fas fa-info-circle" style="color: var(--accent2); font-size: 20px;"></i>
+  </div>
+  <div>
+    <p style="margin: 0; font-size: 14px; color: var(--text); font-weight: 600;">Narx chegaralari qanday ishlaydi?</p>
+    <p style="margin: 4px 0 0; font-size: 13px; color: var(--muted);">Ishchilar o‘z xizmatlari narxini faqat siz belgilagan minimal va maksimal qiymat oralig‘ida tanlashi mumkin.</p>
+  </div>
+</div>
+
+{% if pricelists %}
+<div class="pricelist-grid">
+  {% for pl in pricelists %}
+  <div class="price-card {% if not pl.is_active %}inactive{% endif %}">
+    <!-- Status Indicator -->
+    <div class="status-indicator {% if pl.is_active %}active{% else %}inactive{% endif %}">
+      <span class="status-dot"></span>
+      <span>{{ pl.is_active|yesno:"Faol,Nofaol" }}</span>
+    </div>
+
+    <!-- Service Type -->
+    <div class="service-type">
+      <i class="fas fa-{{ pl.get_service_type_icon|default:'tag' }}"></i>
+      {{ pl.get_service_type_display }}
+    </div>
+
+    <!-- Price Bars Visual -->
+    <div class="price-visual">
+      <!-- Minimal -->
+      <div class="price-bar-row">
+        <div class="bar-label">
+          <span>Minimal</span>
+          <span class="bar-value min">{{ pl.min_price|floatformat:0 }} so'm</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill min" style="width: 10%;"></div>
+        </div>
+      </div>
+
+      <!-- Recommended (agar mavjud bo'lsa) -->
+      {% if pl.recommended_price %}
+      <div class="price-bar-row recommended">
+        <div class="bar-label">
+          <span>Tavsiya etilgan</span>
+          <span class="bar-value rec">{{ pl.recommended_price|floatformat:0 }} so'm</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill rec" style="width: 50%;"></div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Maksimal -->
+      <div class="price-bar-row">
+        <div class="bar-label">
+          <span>Maksimal</span>
+          <span class="bar-value max">{{ pl.max_price|floatformat:0 }} so'm</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill max" style="width: 90%;"></div>
+        </div>
+      </div>
+    </div>
+
+    {% if pl.description %}
+    <p class="price-desc">{{ pl.description }}</p>
+    {% endif %}
+
+    <div class="price-actions">
+      <a href="{% url 'owner:pricelist_create' %}?edit={{ pl.pk }}" class="btn-edit">
+        <i class="fas fa-edit"></i> Tahrirlash
+      </a>
+      <form method="post" action="{% url 'owner:pricelist_delete' pl.pk %}" onsubmit="return confirm('O\'chirishni tasdiqlaysizmi?')">
+        {% csrf_token %}
+        <button type="submit" class="btn-delete"><i class="fas fa-trash"></i></button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state-card">
+  <div class="empty-icon-wrapper">
+    <i class="fas fa-tags"></i>
+  </div>
+  <h3>Narx ro‘yxati hali belgilanmagan</h3>
+  <p>Ishchilar uchun xizmat narxlarini boshqarishni boshlang</p>
+  <a href="{% url 'owner:pricelist_create' %}" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 28px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border-radius: 12px; text-decoration: none; font-weight: 600; margin-top: 20px;">
+    <i class="fas fa-plus"></i> Birinchi narxni qo‘shish
+  </a>
+</div>
+{% endif %}
+
+<style>
+  .pricelist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+  }
+
+  .price-card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .price-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .price-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(2, 16, 36, 0.4);
+    border-color: var(--accent2);
+  }
+  .price-card:hover::before {
+    opacity: 1;
+  }
+
+  .price-card.inactive {
+    opacity: 0.65;
+    filter: grayscale(30%);
+  }
+
+  /* Status */
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+  .status-indicator.active {
+    background: rgba(0, 232, 122, 0.1);
+    color: var(--green);
+    border: 1px solid rgba(0, 232, 122, 0.25);
+  }
+  .status-indicator.inactive {
+    background: rgba(255, 77, 106, 0.1);
+    color: var(--red);
+    border: 1px solid rgba(255, 77, 106, 0.25);
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* Service Type */
+  .service-type {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 2px;
+    color: var(--text);
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .service-type i {
+    color: var(--accent2);
+    font-size: 26px;
+  }
+
+  /* Price Visual */
+  .price-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .price-bar-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .bar-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--soft);
+  }
+  .bar-label span:first-child {
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .bar-value {
+    font-weight: 800;
+    font-size: 15px;
+  }
+  .bar-value.min { color: var(--green); }
+  .bar-value.max { color: var(--red); }
+  .bar-value.rec { color: var(--accent2); }
+
+  .bar-track {
+    width: 100%;
+    height: 6px;
+    background: var(--border2);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.5s ease;
+  }
+  .bar-fill.min { background: linear-gradient(90deg, #00e87a, #2ecc71); }
+  .bar-fill.max { background: linear-gradient(90deg, #ff4d6a, #e74c3c); }
+  .bar-fill.rec { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+  .price-bar-row.recommended {
+    background: rgba(15,143,152,0.05);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin: 4px -12px;
+  }
+
+  .price-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 16px 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--border2);
+  }
+
+  .price-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .btn-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--glass2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--soft);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-edit:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(15,143,152,0.05);
+  }
+  .btn-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 77, 106, 0.08);
+    border: 1px solid rgba(255, 77, 106, 0.2);
+    border-radius: 10px;
+    color: var(--red);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+  }
+  .btn-delete:hover {
+    background: rgba(255, 77, 106, 0.2);
+    border-color: var(--red);
+  }
+
+  /* Empty state */
+  .empty-state-card {
+    text-align: center;
+    padding: 80px 20px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    backdrop-filter: blur(20px);
+  }
+  .empty-icon-wrapper {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: rgba(15,143,152,0.08);
+    border: 2px dashed rgba(15,143,152,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 42px;
+    color: var(--accent2);
+  }
+  .empty-state-card h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .empty-state-card p {
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  @media (max-width: 768px) {
+    .pricelist-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}

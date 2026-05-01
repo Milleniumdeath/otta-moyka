@@ -22,7 +22,18 @@
         <div style="font-size:15px;font-weight:700;color:var(--text);">{{ form.email.value }}</div>
     </div>
 </div>
-
+{% if form.errors %}
+<div style="background:rgba(255,77,106,0.1);border:1px solid rgba(255,77,106,0.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#ff4d6a;">
+    {% for field in form %}
+        {% for error in field.errors %}
+            <div><i class="fa-solid fa-circle-xmark"></i> {{ field.label }}: {{ error }}</div>
+        {% endfor %}
+    {% endfor %}
+    {% for error in form.non_field_errors %}
+        <div><i class="fa-solid fa-circle-xmark"></i> {{ error }}</div>
+    {% endfor %}
+</div>
+{% endif %}
 <!-- Avtomatik submit -->
 <form method="post" action="{{ request.path }}" id="autoForm">
     {% csrf_token %}

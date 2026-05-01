@@ -22,6 +22,46 @@
 </div>
 {% endif %}
 
+<!-- ✅ YANGI: Mashina tanlash filtri -->
+{% if cars %}
+<div class="car-filter-wrap">
+    <p class="filter-label">
+        <i class="fa-solid fa-filter"></i>
+        Qaysi mashina uchun buyurtma berasiz?
+    </p>
+    <div class="car-tabs">
+        {% for car in cars %}
+        <a href="?car_id={{ car.pk }}"
+           class="car-tab {% if selected_car.pk == car.pk %}active{% endif %}">
+            <i class="fa-solid {% if car.car_type == 'heavy' %}fa-truck-moving{% else %}fa-car-side{% endif %}"></i>
+            <div class="car-tab-info">
+                <span class="car-tab-name">{{ car.brand }} {{ car.model }}</span>
+                <span class="car-tab-plate">{{ car.plate_number }}</span>
+            </div>
+            {% if car.car_type == 'heavy' %}
+                <span class="car-type-badge heavy">Yuk</span>
+            {% else %}
+                <span class="car-type-badge light">Yengil</span>
+            {% endif %}
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if selected_car %}
+    <div class="selected-info">
+        <i class="fa-solid fa-circle-info"></i>
+        <strong>{{ selected_car.brand }} {{ selected_car.model }}</strong> uchun
+        {% if selected_car.car_type == 'heavy' %}
+            <span style="color:#f39c12;">yuk transport</span> xizmatlari ko'rsatilmoqda
+        {% else %}
+            <span style="color:var(--cyan);">yengil avtomobil</span> xizmatlari ko'rsatilmoqda
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+<!-- ✅ YANGI tugadi -->
+
 {% if ads %}
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
 {% for ad in ads %}
@@ -40,6 +80,26 @@
     <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5;">
         {{ ad.description|truncatechars:80 }}
     </div>
+
+    <!-- ✅ YANGI: Ishchi ish vaqti -->
+    {% if ad.worker.schedules.all %}
+    <div style="margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">
+            <i class="fa-solid fa-clock fa-xs"></i> Ish vaqti:
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+            {% for s in ad.worker.schedules.all %}
+            {% if s.is_active %}
+            <span style="font-size:10px;background:rgba(0,200,255,0.08);border:1px solid rgba(0,200,255,0.2);border-radius:5px;padding:2px 7px;color:var(--cyan);">
+                {{ s.get_weekday_display|slice:":2" }} {{ s.start_time|time:"H:i" }}–{{ s.end_time|time:"H:i" }}
+            </span>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    <!-- ✅ YANGI tugadi -->
+
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <span style="font-size:13px;color:var(--soft);">
             <i class="fa-solid fa-user-gear fa-xs"></i> {{ ad.worker.get_full_name }}
@@ -51,7 +111,7 @@
 
     {% if cars %}
     <button class="btn btn-primary" style="width:100%;"
-            onclick="showOrder({{ ad.pk }}, '{{ ad.title }}', {{ ad.price }})">
+            onclick="showOrder({{ ad.pk }}, '{{ ad.title }}', {{ ad.price }}, '{{ ad.worker.get_full_name }}')">
         <i class="fa-solid fa-clipboard-check"></i> Buyurtma Berish
     </button>
     {% else %}
@@ -66,36 +126,88 @@
 {% else %}
 <div class="empty-state">
     <div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div>
-    <p>Hozirda barcha ishchilar band yoki hali e'lon bermagan</p>
+    {% if selected_car %}
+        {% if selected_car.car_type == 'heavy' %}
+            <p>Yuk mashina uchun faol e'lonlar yo'q</p>
+        {% else %}
+            <p>Yengil mashina uchun faol e'lonlar yo'q</p>
+        {% endif %}
+    {% else %}
+        <p>Hozirda barcha ishchilar band yoki hali e'lon bermagan</p>
+    {% endif %}
 </div>
 {% endif %}
 
-<!-- BUYURTMA MODAL -->
+<!-- BUYURTMA MODAL — ✅ scheduled_time qo'shildi -->
 <div class="modal-overlay" id="orderModal">
-    <div class="modal-box" style="text-align:left;max-width:480px;">
+    <div class="modal-box" style="text-align:left;max-width:500px;">
+
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
             <i class="fa-solid fa-clipboard-check" style="font-size:24px;color:var(--cyan);"></i>
             <div class="modal-title" style="margin:0;">Buyurtma Berish</div>
         </div>
         <p class="modal-text" id="orderModalTitle"
            style="text-align:left;color:var(--cyan);font-weight:700;margin-bottom:20px;font-size:16px;"></p>
+
         <form method="post" id="orderForm">
             {% csrf_token %}
+
+            <!-- Mashina tanlash -->
             <div class="form-group">
                 <label class="form-label">Mashinangizni tanlang *</label>
-                <select name="car_id" class="form-control" required>
+                <select name="car_id" id="modalCarSelect" class="form-control" required>
                     {% for car in cars %}
-                    <option value="{{ car.pk }}">{{ car.brand }} {{ car.model }} — {{ car.plate_number }}</option>
+                    <option value="{{ car.pk }}"
+                            data-type="{{ car.car_type }}"
+                            {% if selected_car and selected_car.pk == car.pk %}selected{% endif %}>
+                        {{ car.brand }} {{ car.model }} — {{ car.plate_number }}
+                        {% if car.car_type == 'heavy' %}(Yuk){% else %}(Yengil){% endif %}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
+
+            <!-- ✅ YANGI: Vaqt tanlash -->
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fa-solid fa-calendar-alt fa-xs"></i> Buyurtma vaqti
+                </label>
+                <div class="time-type-row">
+                    <label class="time-type-opt">
+                        <input type="radio" name="time_type" value="now" checked
+                               onchange="toggleScheduled(false)">
+                        <span class="time-type-btn">
+                            <i class="fa-solid fa-bolt"></i> Hozir
+                        </span>
+                    </label>
+                    <label class="time-type-opt">
+                        <input type="radio" name="time_type" value="later"
+                               onchange="toggleScheduled(true)">
+                        <span class="time-type-btn">
+                            <i class="fa-solid fa-calendar-check"></i> Vaqt belgilash
+                        </span>
+                    </label>
+                </div>
+                <div id="scheduledBlock" style="display:none;margin-top:10px;">
+                    <input type="datetime-local" name="scheduled_time" id="scheduledInput"
+                           class="form-control" style="color-scheme:dark;">
+                    <small style="color:var(--muted);font-size:11px;margin-top:4px;display:block;">
+                        <i class="fa-solid fa-info-circle"></i>
+                        Ishchining ish vaqtida bo'lishi kerak
+                    </small>
+                </div>
+            </div>
+            <!-- ✅ YANGI tugadi -->
+
+            <!-- Izoh -->
             <div class="form-group">
                 <label class="form-label">
                     <i class="fa-solid fa-comment-dots fa-xs"></i> Izoh (ixtiyoriy)
                 </label>
-                <textarea name="note" class="form-control" rows="3"
+                <textarea name="note" class="form-control" rows="2"
                     placeholder="Qo'shimcha xohishlar, mashina holati haqida..."></textarea>
             </div>
+
             <div class="modal-btns" style="justify-content:flex-start;">
                 <button type="submit" class="btn btn-primary">
                     <i class="fa-solid fa-check"></i> Buyurtma Berish
@@ -108,20 +220,170 @@
     </div>
 </div>
 
+<!-- ✅ YANGI: Mashina turi mos emas xabari -->
+<div class="modal-overlay" id="typeErrorModal">
+    <div class="modal-box" style="text-align:center;max-width:400px;">
+        <i class="fa-solid fa-triangle-exclamation" style="font-size:40px;color:#f39c12;margin-bottom:16px;display:block;"></i>
+        <div class="modal-title">Mashina turi mos emas!</div>
+        <p class="modal-text" id="typeErrorText"></p>
+        <button class="btn btn-primary" onclick="closeTypeError()">
+            <i class="fa-solid fa-check"></i> Tushundim
+        </button>
+    </div>
+</div>
+
+<!-- ✅ CSS -->
+<style>
+/* Mashina filtri */
+.car-filter-wrap {
+    margin-bottom: 24px;
+}
+.filter-label {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.car-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.car-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 13px;
+    text-decoration: none;
+    transition: all .2s;
+}
+.car-tab:hover { border-color: var(--cyan); }
+.car-tab.active {
+    border-color: var(--cyan);
+    background: rgba(0,200,255,0.08);
+    color: var(--cyan);
+}
+.car-tab-info { display: flex; flex-direction: column; gap: 1px; }
+.car-tab-name { font-weight: 700; font-size: 13px; }
+.car-tab-plate {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 600;
+}
+.car-type-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+.car-type-badge.heavy { background: rgba(243,156,18,0.15); color: #f39c12; }
+.car-type-badge.light { background: rgba(0,200,255,0.15); color: var(--cyan); }
+.selected-info {
+    font-size: 13px;
+    color: var(--muted);
+    background: rgba(0,200,255,0.05);
+    border: 1px solid rgba(0,200,255,0.1);
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Vaqt tanlash */
+.time-type-row {
+    display: flex;
+    gap: 10px;
+}
+.time-type-opt input[type="radio"] { display: none; }
+.time-type-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+.time-type-opt input:checked + .time-type-btn {
+    border-color: var(--cyan);
+    background: rgba(0,200,255,0.1);
+    color: var(--cyan);
+}
+.time-type-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+</style>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function showOrder(adPk, title, price) {
+// Modal ochish
+function showOrder(adPk, title, price, worker) {
     document.getElementById('orderModalTitle').textContent =
-        title + ' — ' + price.toLocaleString() + " so'm";
+        title + ' — ' + price.toLocaleString() + " so'm | " + worker;
     document.getElementById('orderForm').action =
         '/customer/orders/' + adPk + '/book/';
+
+    // Minimal vaqt: hozirdan 30 daqiqa keyin
+    const now = new Date(Date.now() + 30 * 60 * 1000);
+    const pad = n => String(n).padStart(2, '0');
+    const minVal = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const si = document.getElementById('scheduledInput');
+    si.min   = minVal;
+    si.value = minVal;
+
+    // Radio ni "hozir" ga qaytarish
+    document.querySelector('input[name="time_type"][value="now"]').checked = true;
+    toggleScheduled(false);
+
     document.getElementById('orderModal').classList.add('show');
 }
+
 function closeOrder() {
     document.getElementById('orderModal').classList.remove('show');
 }
+
+// Vaqt blokini yoqish/o'chirish
+function toggleScheduled(show) {
+    const block = document.getElementById('scheduledBlock');
+    const input = document.getElementById('scheduledInput');
+    block.style.display = show ? 'block' : 'none';
+    input.name = show ? 'scheduled_time' : '';
+    input.required = show;
+}
+
+// Mashina turi xato modali
+function closeTypeError() {
+    document.getElementById('typeErrorModal').classList.remove('show');
+}
+
+// ESC bilan modalni yopish
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeOrder();
+        closeTypeError();
+    }
+});
+
+// Tashqariga bosib yopish
+document.getElementById('orderModal').addEventListener('click', function(e) {
+    if (e.target === this) closeOrder();
+});
+document.getElementById('typeErrorModal').addEventListener('click', function(e) {
+    if (e.target === this) closeTypeError();
+});
 </script>
 {% endblock %}
-

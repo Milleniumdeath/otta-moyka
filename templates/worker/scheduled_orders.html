@@ -1,0 +1,299 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Ish Jadvalim{% endblock %}
+{% block page_title %}Ish Jadvalim{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'worker:dashboard' %}" class="nav-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'worker:my_ads' %}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a>
+<a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar{% if pending_count %} <span class="nav-badge">{{ pending_count }}</span>{% endif %}</a>
+<a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'worker:schedule_list' %}" class="nav-item"><i class="fa-solid fa-calendar-alt"></i> Ish Jadvalim</a>
+<a href="{% url 'worker:scheduled_orders' %}" class="nav-item"><i class="fa-solid fa-calendar-check"></i> Rejalashtirilgan</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block content %}
+<style>
+  /* Header */
+  .so-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .so-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .so-header h2 i { color: var(--accent2); }
+
+  /* Buyurtma soni badge */
+  .count-badge {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-left: 8px;
+  }
+
+  /* Ro'yxat */
+  .so-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Karta */
+  .so-card {
+    background: var(--bg2);
+    border: 1px solid rgba(15,143,152,0.3);
+    border-left: 4px solid var(--accent2);
+    border-radius: 14px;
+    padding: 20px 22px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 20px;
+    transition: box-shadow .2s;
+  }
+  .so-card:hover {
+    box-shadow: 0 4px 20px rgba(15,143,152,0.15);
+  }
+
+  /* Vaqt bloki */
+  .so-time {
+    text-align: center;
+    min-width: 90px;
+  }
+  .so-time .time-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent2);
+    line-height: 1;
+  }
+  .so-time .date-val {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Ajratuvchi chiziq */
+  .so-divider {
+    width: 1px;
+    height: 50px;
+    background: var(--muted);
+    display: none;
+  }
+
+  /* Info bloki */
+  .so-info { flex: 1; }
+  .so-info .client-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .so-info .car-info {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .so-info .car-info i { color: var(--accent2); }
+  .so-info .note-info {
+    font-size: 12px;
+    color: var(--text);
+    background: rgba(11,110,116,0.08);
+    border-radius: 6px;
+    padding: 4px 10px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+
+  /* Narx va tugmalar */
+  .so-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .so-price {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent2);
+    white-space: nowrap;
+  }
+  .so-price small {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 2px;
+  }
+
+  .so-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-accept {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(46,204,113,0.15);
+    border: 1px solid rgba(46,204,113,0.4);
+    color: #2ecc71;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    text-decoration: none;
+  }
+  .btn-accept:hover {
+    background: rgba(46,204,113,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-reject {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(231,76,60,0.12);
+    border: 1px solid rgba(231,76,60,0.3);
+    color: #e74c3c;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    text-decoration: none;
+  }
+  .btn-reject:hover {
+    background: rgba(231,76,60,0.25);
+    transform: translateY(-1px);
+  }
+
+  /* Bo'sh holat */
+  .so-empty {
+    text-align: center;
+    padding: 70px 20px;
+    color: var(--muted);
+  }
+  .so-empty .empty-icon {
+    font-size: 52px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    opacity: .5;
+  }
+  .so-empty p {
+    font-size: 16px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .so-empty small {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .so-card {
+      grid-template-columns: 1fr;
+    }
+    .so-right { align-items: flex-start; }
+  }
+</style>
+
+<div class="so-header">
+  <h2>
+    <i class="fa-solid fa-calendar-check"></i>
+    Rejalashtirilgan Buyurtmalar
+    {% if upcoming %}
+      <span class="count-badge">{{ upcoming|length }}</span>
+    {% endif %}
+  </h2>
+</div>
+
+{% if upcoming %}
+<div class="so-list">
+  {% for order in upcoming %}
+  <div class="so-card">
+
+    <!-- Vaqt -->
+    <div class="so-time">
+      <div class="time-val">
+        {{ order.scheduled_time|time:"H:i" }}
+      </div>
+      <div class="date-val">
+        {{ order.scheduled_time|date:"d-m-Y" }}
+      </div>
+    </div>
+
+    <!-- Ma'lumot -->
+    <div class="so-info">
+      <div class="client-name">
+        <i class="fa-solid fa-user" style="color:var(--accent2);margin-right:5px;font-size:12px;"></i>
+        {{ order.customer.get_full_name }}
+      </div>
+      <div class="car-info">
+        <i class="fa-solid fa-car-side"></i>
+        {{ order.car.brand }} {{ order.car.model }}
+        &nbsp;·&nbsp;
+        <span style="font-weight:600;color:var(--text)">{{ order.car.plate_number }}</span>
+      </div>
+      {% if order.note %}
+      <span class="note-info">
+        <i class="fa-solid fa-quote-left" style="font-size:10px;margin-right:4px;"></i>{{ order.note }}
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Narx va tugmalar -->
+    <div class="so-right">
+      <div class="so-price">
+        {{ order.total_price|floatformat:0 }}
+        <small>so'm</small>
+      </div>
+      <div class="so-actions">
+        <form method="post" action="{% url 'worker:accept_order' order.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-accept">
+            <i class="fa-solid fa-check"></i> Qabul
+          </button>
+        </form>
+        <form method="post" action="{% url 'worker:reject_order' order.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-reject">
+            <i class="fa-solid fa-xmark"></i> Rad
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="so-empty">
+  <div class="empty-icon">
+    <i class="fa-regular fa-calendar-xmark"></i>
+  </div>
+  <p>Rejalashtirilgan buyurtmalar yo'q</p>
+  <small>Mijozlar vaqt belgilab buyurtma berganda bu yerda ko'rinadi</small>
+</div>
+{% endif %}
+
+{% endblock %}

@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ── ASOSIY ──
 SECRET_KEY    = os.environ.get('SECRET_KEY', 'dev-fallback-key')
 DEBUG         = os.environ.get('DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # ── ILOVALAR ──
 INSTALLED_APPS = [
@@ -181,3 +181,8 @@ LANGUAGE_CODE = 'uz'
 TIME_ZONE     = 'Asia/Tashkent'
 USE_I18N      = True
 USE_TZ        = True
+
+SOCIALACCOUNT_ADAPTER                        = 'accounts.adapters.OttaSocialAdapter'
+SOCIALACCOUNT_EMAIL_AUTHENTICATION           = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_LOGIN_ON_GET = False

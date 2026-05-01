@@ -27,6 +27,16 @@
 .s-dot.wait   { background:rgba(107,156,186,0.06); color:var(--muted); border:1px solid var(--border); }
 .pulse-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#f59e0b; animation:blink 1.2s infinite; margin-left:5px; vertical-align:middle; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+html, body {
+    height: auto !important;
+    overflow-y: auto !important;
+    min-height: 100vh;
+}
+.auth-box {
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 20px auto;
+}
 </style>
 {% endblock %}
 

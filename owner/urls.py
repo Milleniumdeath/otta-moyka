@@ -17,6 +17,9 @@ urlpatterns = [
     path('bonuses/delete/<int:pk>/',views.delete_bonus,     name='delete_bonus'),
     path('cameras/',                views.cameras,          name='cameras'),
     path('profile/',                views.profile,          name='profile'),
+    path('pricelist/', views.pricelist_view, name='pricelist'),
+    path('pricelist/create/', views.pricelist_create, name='pricelist_create'),
+    path('pricelist/<int:pk>/delete/', views.pricelist_delete, name='pricelist_delete'),
 
     # Kirim & Chiqim
     path('finance/',                        finance_views.finance,        name='finance'),

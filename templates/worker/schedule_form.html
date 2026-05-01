@@ -1,0 +1,245 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Ish Jadvalim{% endblock %}
+{% block page_title %}Ish Jadvalim{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'worker:dashboard' %}" class="nav-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'worker:my_ads' %}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a>
+<a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar{% if pending_count %} <span class="nav-badge">{{ pending_count }}</span>{% endif %}</a>
+<a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'worker:schedule_list' %}" class="nav-item"><i class="fa-solid fa-calendar-alt"></i> Ish Jadvalim</a>
+<a href="{% url 'worker:scheduled_orders' %}" class="nav-item"><i class="fa-solid fa-calendar-check"></i> Rejalashtirilgan</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block content %}
+
+<style>
+  .sf-wrap {
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .sf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .sf-header h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sf-header h2 i { color: var(--accent2); }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid var(--muted);
+    color: var(--text);
+    background: transparent;
+    text-decoration: none;
+    transition: all .2s;
+  }
+  .btn-back:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* Karta */
+  .sf-card {
+    background: var(--bg2);
+    border: 1px solid var(--muted);
+    border-radius: 16px;
+    padding: 32px 28px;
+  }
+
+  /* Form group */
+  .fg {
+    margin-bottom: 22px;
+  }
+  .fg label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .fg label i { color: var(--accent2); width: 14px; text-align: center; }
+
+  .fg select,
+  .fg input[type="time"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--muted);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+    appearance: auto;
+  }
+  .fg select:focus,
+  .fg input[type="time"]:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(15,143,152,0.15);
+  }
+
+  /* Ikki ustunli qator */
+  .fg-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  /* Checkbox */
+  .fg-check {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(11,110,116,0.08);
+    border: 1px solid rgba(15,143,152,0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    margin-bottom: 24px;
+    transition: background .2s;
+  }
+  .fg-check:hover { background: rgba(11,110,116,0.15); }
+
+  .fg-check input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent2);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .fg-check span {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .fg-check small {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* Xato */
+  .err-box {
+    background: rgba(231,76,60,0.1);
+    border: 1px solid rgba(231,76,60,0.3);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #e74c3c;
+  }
+
+  /* Saqlash tugmasi */
+  .btn-save {
+    width: 100%;
+    padding: 13px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border: none;
+    border-radius: 11px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity .2s, transform .2s;
+  }
+  .btn-save:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-save:active { transform: translateY(0); }
+
+  /* Ajratuvchi chiziq */
+  .sf-divider {
+    border: none;
+    border-top: 1px solid var(--muted);
+    margin: 24px 0;
+  }
+</style>
+
+<div class="sf-wrap">
+
+  <div class="sf-header">
+    <h2><i class="fa-solid fa-clock"></i> Ish Vaqti Qo'shish</h2>
+    <a href="{% url 'worker:schedule_list' %}" class="btn-back">
+      <i class="fa-solid fa-arrow-left"></i> Orqaga
+    </a>
+  </div>
+
+  <div class="sf-card">
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <!-- Hafta kuni -->
+      <div class="fg">
+        <label><i class="fa-solid fa-calendar-days"></i> Hafta kuni</label>
+        {{ form.weekday }}
+      </div>
+
+      <hr class="sf-divider">
+
+      <!-- Vaqt -->
+      <div class="fg-row">
+        <div class="fg">
+          <label><i class="fa-solid fa-sun"></i> Boshlanish</label>
+          {{ form.start_time }}
+        </div>
+        <div class="fg">
+          <label><i class="fa-solid fa-moon"></i> Tugash</label>
+          {{ form.end_time }}
+        </div>
+      </div>
+
+      <hr class="sf-divider">
+
+      <!-- Faollik -->
+      <label class="fg-check">
+        {{ form.is_active }}
+        <div>
+          <span>Bu kun ish kuni</span>
+          <small>Belgilansa mijozlar buyurtma bera oladi</small>
+        </div>
+      </label>
+
+      <!-- Xatolar -->
+      {% if form.errors %}
+        <div class="err-box">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          {% for field in form %}
+            {% for error in field.errors %}{{ error }} {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}{{ error }} {% endfor %}
+        </div>
+      {% endif %}
+
+      <button type="submit" class="btn-save">
+        <i class="fa-solid fa-floppy-disk"></i> Saqlash
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

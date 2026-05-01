@@ -6,8 +6,13 @@ from django.utils import timezone
 from core.models import Order, Bonus, LoyaltyToken
 from worker.models import ServiceAd
 from decimal import Decimal
+from .models import WorkSchedule
+from .forms import ServiceAdForm, WorkScheduleForm
+from functools import wraps
+
 
 def worker_required(view_func):
+    @wraps(view_func)
     @login_required
     def wrapper(request, *args, **kwargs):
         if not request.user.is_worker:
@@ -16,9 +21,90 @@ def worker_required(view_func):
         if not request.user.is_approved:
             return redirect('accounts:pending_approval')
         return view_func(request, *args, **kwargs)
-    wrapper.__name__ = view_func.__name__
     return wrapper
 
+@worker_required
+def scheduled_orders(request):
+    """Ishchi uchun oldindan belgilangan buyurtmalar"""
+    from django.utils import timezone
+    from core.models import Order
+
+    upcoming = Order.objects.filter(
+        service_ad__worker=request.user,
+        status='pending',
+        scheduled_time__gte=timezone.now()
+    ).order_by('scheduled_time')
+
+    context = {'upcoming': upcoming}
+    return render(request, 'worker/scheduled_orders.html', context)
+
+
+@worker_required
+def schedule_list(request):
+    from .models import WorkSchedule
+
+    # Barcha 7 kun uchun ma'lumot tayyorlaymiz
+    weekdays = [
+        (0, 'Dushanba'),
+        (1, 'Seshanba'),
+        (2, 'Chorshanba'),
+        (3, 'Payshanba'),
+        (4, 'Juma'),
+        (5, 'Shanba'),
+        (6, 'Yakshanba'),
+    ]
+
+    existing = {s.weekday: s for s in WorkSchedule.objects.filter(worker=request.user)}
+
+    # Template uchun birlashtilgan list
+    schedule_days = []
+    for day_num, day_name in weekdays:
+        schedule_days.append({
+            'day_num': day_num,
+            'day_name': day_name,
+            'schedule': existing.get(day_num),  # None yoki WorkSchedule obyekti
+        })
+
+    return render(request, 'worker/schedule.html', {'schedule_days': schedule_days})
+
+
+@worker_required
+def schedule_create(request):
+    """Yangi ish kuni qo'shish"""
+    if request.method == 'POST':
+        form = WorkScheduleForm(request.POST)
+        if form.is_valid():
+            schedule = form.save(commit=False)
+            schedule.worker = request.user
+            # Mavjud bo'lsa yangilash
+            existing = WorkSchedule.objects.filter(
+                worker=request.user,
+                weekday=schedule.weekday
+            ).first()
+            if existing:
+                existing.start_time = schedule.start_time
+                existing.end_time   = schedule.end_time
+                existing.is_active  = schedule.is_active
+                existing.save()
+                messages.success(request, "Jadval yangilandi!")
+            else:
+                schedule.save()
+                messages.success(request, "Jadval saqlandi!")
+            return redirect('worker:schedule_list')
+    else:
+        form = WorkScheduleForm()
+    return render(request, 'worker/schedule_form.html', {'form': form})
+
+
+@worker_required
+def schedule_toggle(request, pk):
+    """Ish kunini yoqish/o'chirish"""
+    schedule = get_object_or_404(WorkSchedule, pk=pk, worker=request.user)
+    schedule.is_active = not schedule.is_active
+    schedule.save()
+    status = "yoqildi" if schedule.is_active else "o'chirildi"
+    messages.success(request, f"{schedule.get_weekday_display()} {status}!")
+    return redirect('worker:schedule_list')
 
 @worker_required
 def dashboard(request):
@@ -65,35 +151,43 @@ def my_ads(request):
     ads = ServiceAd.objects.filter(worker=request.user)
     return render(request, 'worker/my_ads.html', {'ads': ads})
 
+# worker/views.py
+
+from django.core.exceptions import ValidationError
+from django.contrib import messages
 
 @worker_required
 def create_ad(request):
     if request.method == 'POST':
-        title        = request.POST.get('title','').strip()
-        description  = request.POST.get('description','').strip()
-        service_type = request.POST.get('service_type','')
-        price        = request.POST.get('price', 0)
-        if not all([title, description, service_type, price]):
-            messages.error(request, "Barcha maydonlarni to'ldiring.")
+        form = ServiceAdForm(request.POST)
+        if form.is_valid():
+            ad = form.save(commit=False)
+            ad.worker = request.user
+            ad.full_clean()   # clean() da narx tekshiriladi (ValidationError)
+            ad.save()
+            messages.success(request, "E'lon muvaffaqiyatli yaratildi!")
             return redirect('worker:my_ads')
-        ServiceAd.objects.create(worker=request.user, title=title, description=description, service_type=service_type, price=int(price))
-        messages.success(request, "E'lon yaratildi!")
-    return redirect('worker:my_ads')
-
-
+        else:
+            # form xatoliklari allaqachon mavjud
+            pass
+    else:
+        form = ServiceAdForm()
+    return render(request, 'worker/ad_create.html', {'form': form})
 @worker_required
 def edit_ad(request, pk):
     ad = get_object_or_404(ServiceAd, pk=pk, worker=request.user)
     if request.method == 'POST':
-        ad.title=request.POST.get('title',ad.title).strip()
-        ad.description=request.POST.get('description',ad.description).strip()
-        ad.service_type=request.POST.get('service_type',ad.service_type)
-        ad.price=int(request.POST.get('price',ad.price))
-        ad.save()
-        messages.success(request, "E'lon yangilandi!")
-        return redirect('worker:my_ads')
-    return render(request, 'worker/ad_edit.html', {'ad': ad})
-
+        form = ServiceAdForm(request.POST, instance=ad)
+        if form.is_valid():
+            ad = form.save(commit=False)
+            ad.full_clean()   # narx validatsiyasi
+            ad.save()
+            messages.success(request, "E'lon yangilandi!")
+            return redirect('worker:my_ads')
+        # form xatoliklari avtomatik ko‘rsatiladi
+    else:
+        form = ServiceAdForm(instance=ad)
+    return render(request, 'worker/ad_edit.html', {'form': form, 'ad': ad})
 
 @worker_required
 def delete_ad(request, pk):

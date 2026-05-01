@@ -1,0 +1,248 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Yangi E'lon Yaratish{% endblock %}
+{% block page_title %}Yangi E'lon Yaratish{% endblock %}
+{% block sidebar_nav %}
+<a href="{% url 'worker:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'worker:my_ads' %}" class="nav-item active"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a>
+<a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
+<a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'worker:schedule_list' %}" class="nav-item"><i class="fa-solid fa-calendar-alt"></i> Ish Jadvalim</a>
+<a href="{% url 'worker:scheduled_orders' %}" class="nav-item"><i class="fa-solid fa-calendar-check"></i> Rejalashtirilgan</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block extra_style %}
+<style>
+  .create-ad-wrapper {
+    max-width: 680px;
+  }
+  .create-ad-card {
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 36px 32px;
+    transition: all 0.3s ease;
+  }
+  .create-ad-card:hover {
+    box-shadow: 0 20px 60px rgba(2, 16, 36, 0.5);
+  }
+  .create-ad-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .create-ad-header .icon-circle {
+    width: 56px; height: 56px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, rgba(84, 131, 179, 0.15), rgba(15, 143, 152, 0.15));
+    border: 1px solid rgba(15, 143, 152, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: var(--accent2);
+  }
+  .create-ad-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 2px;
+    margin: 0;
+    color: var(--text);
+  }
+  .create-ad-header p {
+    margin: 4px 0 0;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .form-group {
+    margin-bottom: 24px;
+  }
+  .form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--soft);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .form-group label i {
+    color: var(--accent2);
+    font-size: 14px;
+  }
+  .form-control {
+    width: 100%;
+    background: rgba(2, 16, 36, 0.5);
+    border: 1.5px solid var(--border2);
+    border-radius: 12px;
+    padding: 14px 18px;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    backdrop-filter: blur(8px);
+  }
+  .form-control:focus {
+    border-color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(15, 143, 152, 0.15);
+  }
+  select.form-control {
+    cursor: pointer;
+    appearance: auto;
+  }
+  textarea.form-control {
+    resize: vertical;
+    min-height: 120px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .error-list {
+    background: rgba(255, 77, 106, 0.08);
+    border: 1px solid rgba(255, 77, 106, 0.25);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: var(--red);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .error-list i {
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .error-list ul {
+    margin: 0;
+    padding-left: 16px;
+  }
+  .btn-save {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(15, 143, 152, 0.3);
+    text-decoration: none;
+  }
+  .btn-save:hover {
+    filter: brightness(1.15);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 32px rgba(15, 143, 152, 0.45);
+  }
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 10px;
+    background: var(--glass2);
+    border: 1px solid var(--border);
+    color: var(--soft);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    margin-bottom: 20px;
+  }
+  .btn-back:hover {
+    border-color: var(--accent2);
+    color: var(--accent2);
+    background: rgba(15,143,152,0.05);
+  }
+  @media (max-width: 600px) {
+    .form-row {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="create-ad-wrapper">
+  <a href="{% url 'worker:my_ads' %}" class="btn-back">
+    <i class="fa-solid fa-arrow-left"></i> E'lonlarimga qaytish
+  </a>
+
+  <div class="create-ad-card">
+    <div class="create-ad-header">
+      <div class="icon-circle">
+        <i class="fa-solid fa-bullhorn"></i>
+      </div>
+      <div>
+        <h2>Yangi E'lon Yaratish</h2>
+        <p>Xizmatingizni mijozlarga taklif qiling</p>
+      </div>
+    </div>
+
+    {% if form.errors %}
+    <div class="error-list">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <div>
+        <strong>Iltimos, xatolarni to‘g‘rilang:</strong>
+        <ul>
+          {% for field in form %}
+            {% for error in field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'worker:create_ad' %}">
+      {% csrf_token %}
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="id_service_type"><i class="fa-solid fa-tag"></i> Xizmat turi</label>
+          {{ form.service_type }}
+        </div>
+        <div class="form-group">
+          <label for="id_price"><i class="fa-solid fa-coins"></i> Narx (so'm)</label>
+          {{ form.price }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="id_title"><i class="fa-solid fa-heading"></i> Sarlavha</label>
+        {{ form.title }}
+      </div>
+
+      <div class="form-group">
+        <label for="id_description"><i class="fa-solid fa-align-left"></i> Tajriba va tavsif</label>
+        {{ form.description }}
+      </div>
+
+      <button type="submit" class="btn-save">
+        <i class="fa-solid fa-paper-plane"></i> E'lonni Chop Etish
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

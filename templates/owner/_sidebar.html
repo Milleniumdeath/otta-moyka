@@ -17,6 +17,11 @@
 <a href="{% url 'owner:cameras' %}" class="nav-item {% if request.resolver_match.url_name == 'cameras' %}active{% endif %}">
     <i class="fa-solid fa-video"></i> Kameralar
 </a>
+<a href="{% url 'owner:pricelist' %}"
+   class="nav-item {% if request.resolver_match.url_name == 'pricelist' %}active{% endif %}">
+  <i class="fas fa-tags"></i>
+  <span>Narx Ro'yxati</span>
+</a>
 <div class="nav-section">Sozlamalar</div>
 <a href="{% url 'owner:profile' %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
     <i class="fa-solid fa-user-gear"></i> Profil

@@ -1,39 +1,31 @@
-{% extends 'base/panel_base.html' %}{% block title %}Bonuslar{% endblock %}{% block page_title %}Bonuslar{% endblock %}
+{% extends 'base/panel_base.html' %}
+{% block title %}Bonusni Tahrirlash{% endblock %}
+{% block page_title %}Bonusni Tahrirlash{% endblock %}
 {% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
 {% block content %}
 <div class="form-card">
-    <div class="form-card-title"><i class="fa-solid fa-plus-circle"></i> Yangi Bonus Yaratish</div>
-    <form method="post" action="{% url 'owner:create_bonus' %}" enctype="multipart/form-data">{% csrf_token %}
+    <div class="form-card-title"><i class="fa-solid fa-pen-to-square"></i> Bonusni Tahrirlash</div>
+    <form method="post" action="{% url 'owner:edit_bonus' bonus.pk %}" enctype="multipart/form-data">{% csrf_token %}
         <div class="form-row">
-            <div class="form-group"><label class="form-label">Buyum nomi *</label><input type="text" name="name" class="form-control" placeholder="Kleyner, rezina..." required></div>
-            <div class="form-group"><label class="form-label">Narxi (tanga) *</label><input type="number" name="token_cost" class="form-control" placeholder="100" min="1" required></div>
+            <div class="form-group"><label class="form-label">Buyum nomi *</label>
+                <input type="text" name="name" class="form-control" value="{{ bonus.name }}" required>
+            </div>
+            <div class="form-group"><label class="form-label">Narxi (tanga) *</label>
+                <input type="number" name="token_cost" class="form-control" value="{{ bonus.token_cost }}" min="1" required>
+            </div>
         </div>
         <div class="form-row">
-            <div class="form-group"><label class="form-label">Miqdori *</label><input type="number" name="quantity" class="form-control" placeholder="10" min="1" required></div>
-            <div class="form-group"><label class="form-label">Rasm</label><input type="file" name="image" class="form-control" accept="image/*"></div>
+            <div class="form-group"><label class="form-label">Miqdori *</label>
+                <input type="number" name="quantity" class="form-control" value="{{ bonus.quantity }}" min="1" required>
+            </div>
+            <div class="form-group"><label class="form-label">Yangi rasm</label>
+                <input type="file" name="image" class="form-control" accept="image/*">
+            </div>
         </div>
-        <div class="form-group"><label class="form-label">Tavsif</label><textarea name="description" class="form-control" rows="2" placeholder="Buyum haqida..."></textarea></div>
-        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-gift"></i> Yaratish</button>
+        <div class="form-group"><label class="form-label">Tavsif</label>
+            <textarea name="description" class="form-control" rows="2">{{ bonus.description }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Saqlash</button>
     </form>
-</div>
-<div class="table-card">
-    <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-box-open"></i> Mavjud Bonuslar</div></div>
-    {% if bonuses %}
-    <table><thead><tr><th>Buyum</th><th>Narxi</th><th>Qoldi</th><th>Holat</th><th>Amal</th></tr></thead><tbody>
-    {% for b in bonuses %}<tr>
-        <td><div class="user-cell">
-            {% if b.image %}<img src="{{ b.image.url }}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">
-            {% else %}<div style="width:40px;height:40px;border-radius:8px;background:rgba(84,131,179,0.1);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--accent2);"><i class="fa-solid fa-gift"></i></div>{% endif %}
-            <div><div class="td-main">{{ b.name }}</div><div style="font-size:12px;color:var(--muted);">{{ b.description|truncatechars:30 }}</div></div>
-        </div></td>
-        <td style="color:var(--accent2);font-weight:700;"><i class="fa-solid fa-coins"></i> {{ b.token_cost }}</td>
-        <td class="td-main">{{ b.quantity }} ta</td>
-        <td>{% if b.is_available %}<span class="badge badge-completed"><i class="fa-solid fa-circle-check"></i> Mavjud</span>{% else %}<span class="badge badge-rejected"><i class="fa-solid fa-circle-xmark"></i> Tugagan</span>{% endif %}</td>
-        <td style="display:flex;gap:6px;">
-            <a href="{% url 'owner:edit_bonus' b.pk %}" class="btn btn-ghost btn-sm"><i class="fa-solid fa-pen"></i></a>
-            <form method="post" action="{% url 'owner:delete_bonus' b.pk %}" style="display:inline" onsubmit="return confirm('O\'chirishni tasdiqlaysizmi?')">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i></button></form>
-        </td>
-    </tr>{% endfor %}</tbody></table>
-    {% else %}<div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-gift"></i></div><p>Hali bonuslar yaratilmagan</p></div>{% endif %}
 </div>
 {% endblock %}

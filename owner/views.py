@@ -3,21 +3,68 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from accounts.models import User
 from core.models import Order, Bonus, LoyaltyToken
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import PriceList
+from .forms import PriceListForm
+from functools import wraps
 
-
-
-# ─────────────────────────────────────────────────────────────
-# DECORATOR
-# ─────────────────────────────────────────────────────────────
 def owner_required(view_func):
+    @wraps(view_func)
     @login_required
     def wrapper(request, *args, **kwargs):
         if not request.user.is_owner:
             messages.error(request, "Ruxsat yo'q.")
             return redirect('accounts:role_redirect')
         return view_func(request, *args, **kwargs)
-    wrapper.__name__ = view_func.__name__
     return wrapper
+
+@owner_required
+def pricelist_view(request):
+    """Narx ro'yxatini ko'rish va boshqarish"""
+    pricelists = PriceList.objects.all().order_by('service_type')
+    context = {'pricelists': pricelists}
+    return render(request, 'owner/pricelist.html', context)
+
+
+@owner_required
+def pricelist_create(request):
+    """Yangi narx qo'shish yoki yangilash"""
+    if request.method == 'POST':
+        form = PriceListForm(request.POST)
+        if form.is_valid():
+            # Agar bu xizmat turi uchun allaqachon narx bor bo'lsa, yangilash
+            service_type = form.cleaned_data['service_type']
+            pricelist, created = PriceList.objects.update_or_create(
+                service_type=service_type,
+                defaults={
+                    'min_price':         form.cleaned_data['min_price'],
+                    'max_price':         form.cleaned_data['max_price'],
+                    'recommended_price': form.cleaned_data.get('recommended_price'),
+                    'description':       form.cleaned_data.get('description', ''),
+                    'is_active':         form.cleaned_data['is_active'],
+                }
+            )
+            action = "yaratildi" if created else "yangilandi"
+            messages.success(request, f"Narx ro'yxati {action}!")
+            return redirect('owner:pricelist')
+    else:
+        form = PriceListForm()
+    return render(request, 'owner/pricelist_form.html', {'form': form})
+
+
+@owner_required
+def pricelist_delete(request, pk):
+    """Narxni o'chirish"""
+    pricelist = get_object_or_404(PriceList, pk=pk)
+    if request.method == 'POST':
+        pricelist.delete()
+        messages.success(request, "Narx o'chirildi!")
+    return redirect('owner:pricelist')
+
+
+
 
 
 # ─────────────────────────────────────────────────────────────
