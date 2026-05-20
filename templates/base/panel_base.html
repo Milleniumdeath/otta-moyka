@@ -865,14 +865,15 @@ function buildBottomNav(){
 }
 
 // NOTIFICATIONS
-let ws=null,notifOpen=false,notifLoaded=false;
+let ws=null,notifOpen=false,notifLoaded=false,wsFails=0,wsConnected=false;
 function initWS(){
+    if(wsFails>=3) return; // WS qo'llab-quvvatlanmasa (masalan PA bepulda) urinishni to'xtatamiz
     try{
         const p=location.protocol==='https:'?'wss:':'ws:';
         ws=new WebSocket(`${p}//${location.host}/ws/notifications/`);
-        ws.onopen=()=>console.log('WS ulandi');
+        ws.onopen=()=>{wsConnected=true;wsFails=0;console.log('WS ulandi');};
         ws.onmessage=(e)=>{const d=JSON.parse(e.data);if(d.type==='unread_count')setBadge(d.count);else if(d.type==='notification'){showToast(d);notifLoaded=false;if(notifOpen)loadNotifs();}};
-        ws.onclose=()=>setTimeout(initWS,5000);
+        ws.onclose=()=>{if(!wsConnected){wsFails++;}wsConnected=false;if(wsFails<3)setTimeout(initWS,5000);};
         ws.onerror=()=>ws.close();
     }catch(e){}
 }

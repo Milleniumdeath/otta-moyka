@@ -2,9 +2,11 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# .env'ni aniq yo'l bilan yuklash — PA WSGI'da working dir loyiha papkasi
+# emas, shuning uchun load_dotenv() shunchaki ishlamaydi.
+load_dotenv(BASE_DIR / '.env')
 
 # ── ASOSIY ──
 SECRET_KEY    = os.environ.get('SECRET_KEY', 'dev-fallback-key')
