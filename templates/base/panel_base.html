@@ -886,8 +886,100 @@ async function markAllRead(){try{await fetch('/api/notifications/read/',{method:
 function showToast(d){const c=document.getElementById('toastContainer'),id='toast_'+Date.now(),el=document.createElement('div');el.className=`toast ${d.color}`;el.id=id;el.innerHTML=`<div class="toast-icon ${d.color}"><i class="fa-solid ${d.icon}"></i></div><div style="flex:1;"><div class="toast-title">${d.title}</div><div class="toast-msg">${d.message}</div></div><button class="toast-close" onclick="event.stopPropagation();rmToast('${id}')"><i class="fa-solid fa-xmark"></i></button><div class="toast-prog"></div>`;el.addEventListener('click',()=>{if(d.url&&d.url!=='#')location.href=d.url;});c.appendChild(el);setTimeout(()=>rmToast(id),5000);}
 function rmToast(id){const el=document.getElementById(id);if(el){el.style.animation='toastOut 0.3s ease forwards';setTimeout(()=>el.remove(),300);}}
 function csrf(){return document.cookie.split(';').find(c=>c.trim().startsWith('csrftoken='))?.split('=')[1]||'';}
-document.addEventListener('DOMContentLoaded',()=>{buildBottomNav();fetch('/api/notifications/').then(r=>r.json()).then(d=>setBadge(d.unread_count)).catch(()=>{});initWS();});
+document.addEventListener('DOMContentLoaded',()=>{buildBottomNav();fetch('/api/notifications/').then(r=>r.json()).then(d=>setBadge(d.unread_count)).catch(()=>{});initWS();liveStart();});
+
+// ════ LIVE POLLING — sahifani avtomatik yangilash ════
+let liveSig = null, liveTimer = null, liveBannerShown = false;
+const LIVE_INTERVAL = 8000; // 8 sek
+
+function isFormBusy() {
+    // Foydalanuvchi formada ish qilayotgan bo'lsa avto-reload qilmaymiz
+    const el = document.activeElement;
+    if (!el) return false;
+    const tag = (el.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+}
+
+async function liveTick(initial) {
+    if (document.visibilityState !== 'visible') return;
+    try {
+        const r = await fetch('/api/live-digest/', { credentials: 'same-origin' });
+        if (!r.ok) return;
+        const d = await r.json();
+        if (typeof d.unread_notifs === 'number') setBadge(d.unread_notifs);
+        const sig = d.orders_sig || '';
+        if (initial || liveSig === null) { liveSig = sig; return; }
+        if (sig !== liveSig) {
+            liveSig = sig;
+            showLiveBanner();
+        }
+    } catch(e) { /* ignore */ }
+}
+
+function liveStart() {
+    liveTick(true);
+    if (liveTimer) clearInterval(liveTimer);
+    liveTimer = setInterval(() => liveTick(false), LIVE_INTERVAL);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') liveTick(false);
+    });
+}
+
+function showLiveBanner() {
+    if (liveBannerShown) return;
+    liveBannerShown = true;
+    const b = document.createElement('div');
+    b.className = 'live-banner';
+    b.innerHTML = `
+        <i class="fa-solid fa-arrows-rotate live-spin"></i>
+        <span>Yangi yangilanish bor</span>
+        <button class="live-btn" onclick="location.reload()">Yangilash</button>
+        <button class="live-x" title="Yopish" onclick="this.parentElement.remove();liveBannerShown=false;"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    document.body.appendChild(b);
+    // Foydalanuvchi formada bo'lmasa 4 sek ichida avto-reload
+    setTimeout(() => {
+        if (!isFormBusy() && document.body.contains(b)) location.reload();
+    }, 4000);
+}
 </script>
+
+<style>
+.live-banner {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    z-index: 9999;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px 12px 18px;
+    background: linear-gradient(135deg, rgba(0,200,255,0.18), rgba(15,143,152,0.18));
+    border: 1px solid rgba(0,200,255,0.45);
+    border-radius: 14px;
+    color: var(--text);
+    box-shadow: 0 18px 50px -16px rgba(0,200,255,0.55);
+    backdrop-filter: blur(14px);
+    font-size: 13.5px; font-weight: 600;
+    animation: liveIn .45s cubic-bezier(.22,1,.36,1) both;
+}
+.live-banner .live-spin {
+    color: var(--cyan, #00c8ff); font-size: 16px;
+    animation: liveSpin 1.4s linear infinite;
+}
+.live-banner .live-btn {
+    background: linear-gradient(135deg, var(--cyan, #00c8ff), var(--accent, #5483B3));
+    color: #fff; border: 0; border-radius: 10px;
+    padding: 7px 14px; cursor: pointer; font-weight: 700;
+    transition: transform .15s ease, filter .15s ease;
+}
+.live-banner .live-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.live-banner .live-x {
+    background: transparent; border: 0; color: var(--soft, #7aaabf);
+    cursor: pointer; padding: 4px 6px; opacity: .7; transition: opacity .15s;
+}
+.live-banner .live-x:hover { opacity: 1; color: var(--red, #ff4d6a); }
+@keyframes liveIn  { from { opacity:0; transform: translate(-50%, 20px) scale(.95); } to { opacity:1; transform: translate(-50%, 0) scale(1); } }
+@keyframes liveSpin { to { transform: rotate(360deg); } }
+@media (max-width: 540px) { .live-banner { left: 12px; right: 12px; transform: none; bottom: 80px; } }
+@media (prefers-reduced-motion: reduce) { .live-banner, .live-spin { animation: none; } }
+</style>
 
 <script>
 document.querySelectorAll('.alert').forEach((a, i) => {
