@@ -140,6 +140,33 @@
     <canvas id="weekChart" height="90"></canvas>
 </div>
 
+<div class="chart-wrap">
+    <div class="chart-title"><i class="fa-solid fa-chart-area"></i> Kunlik daromad — oxirgi 30 kun</div>
+    <canvas id="dayChart" height="90"></canvas>
+</div>
+
+<div class="rep-2col">
+    <div class="chart-wrap" style="margin-bottom:0;">
+        <div class="chart-title"><i class="fa-solid fa-tasks"></i> Buyurtmalar holati taqsimoti</div>
+        <canvas id="statusChart" height="180"></canvas>
+    </div>
+    <div class="chart-wrap" style="margin-bottom:0;">
+        <div class="chart-title"><i class="fa-solid fa-user-tie"></i> Eng yaxshi ishchilar — TOP-5</div>
+        {% if top_workers %}
+        <canvas id="workerChart" height="180"></canvas>
+        {% else %}
+        <div style="padding:32px 0;text-align:center;color:var(--muted);font-size:13px;">
+            Hozircha yakunlangan buyurtmalar bo'lgan ishchilar yo'q.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="chart-wrap">
+    <div class="chart-title"><i class="fa-solid fa-arrow-trend-up"></i> Kumulyativ daromad — oxirgi 6 oy</div>
+    <canvas id="cumChart" height="90"></canvas>
+</div>
+
 {{ top_labels|json_script:"d-top-labels" }}
 {{ top_values|json_script:"d-top-values" }}
 {{ svc_labels|json_script:"d-svc-labels" }}
@@ -149,6 +176,16 @@
 {{ m_orders|json_script:"d-m-orders" }}
 {{ w_labels|json_script:"d-w-labels" }}
 {{ w_revenue|json_script:"d-w-revenue" }}
+{{ d_labels|json_script:"d-d-labels" }}
+{{ d_revenue|json_script:"d-d-revenue" }}
+{{ wk_labels|json_script:"d-wk-labels" }}
+{{ wk_revenue|json_script:"d-wk-revenue" }}
+{{ wk_orders|json_script:"d-wk-orders" }}
+{{ st_labels|json_script:"d-st-labels" }}
+{{ st_values|json_script:"d-st-values" }}
+{{ st_colors|json_script:"d-st-colors" }}
+{{ cum_revenue|json_script:"d-cum-revenue" }}
+{{ m_labels|json_script:"d-cum-labels" }}
 {% endif %}
 {% endblock %}
 
@@ -248,6 +285,113 @@ new Chart(document.getElementById('weekChart'), {
         scales: {
             x: { ticks: { color: C.muted }, grid: { color: C.grid } },
             y: { ticks: { color: C.muted }, grid: { color: C.grid } }
+        }
+    }
+});
+
+// ── KUNLIK DAROMAD (oxirgi 30 kun) ──
+new Chart(document.getElementById('dayChart'), {
+    type: 'line',
+    data: {
+        labels: J('d-d-labels'),
+        datasets: [{
+            label: 'Kunlik daromad', data: J('d-d-revenue'),
+            borderColor: '#00c8ff', backgroundColor: 'rgba(0,200,255,0.18)',
+            fill: true, tension: 0.32, pointRadius: 2, pointHoverRadius: 6,
+            borderWidth: 2,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: c => sum(c.parsed.y) } }
+        },
+        scales: {
+            x: { ticks: { color: C.muted, maxRotation: 0, autoSkipPadding: 12 }, grid: { color: C.grid } },
+            y: { ticks: { color: C.muted }, grid: { color: C.grid }, beginAtZero: true }
+        }
+    }
+});
+
+// ── BUYURTMA HOLATI TAQSIMOTI ──
+const stLabels = J('d-st-labels');
+if (stLabels.length) {
+    new Chart(document.getElementById('statusChart'), {
+        type: 'pie',
+        data: {
+            labels: stLabels,
+            datasets: [{
+                data: J('d-st-values'),
+                backgroundColor: J('d-st-colors'),
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: C.soft, font: { size: 12 }, padding: 12 } },
+                tooltip: { callbacks: { label: c => c.label + ': ' + c.parsed + ' ta' } }
+            }
+        }
+    });
+}
+
+// ── TOP-5 ISHCHILAR ──
+const wkLabels = J('d-wk-labels');
+if (wkLabels.length && document.getElementById('workerChart')) {
+    new Chart(document.getElementById('workerChart'), {
+        type: 'bar',
+        data: {
+            labels: wkLabels,
+            datasets: [{
+                label: 'Daromad', data: J('d-wk-revenue'),
+                backgroundColor: 'rgba(0,232,122,0.35)',
+                borderColor: '#00e87a', borderWidth: 2, borderRadius: 6,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: c => {
+                            const orders = J('d-wk-orders')[c.dataIndex] || 0;
+                            return sum(c.parsed.x) + ' · ' + orders + ' ta buyurtma';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { color: C.muted }, grid: { color: C.grid } },
+                y: { ticks: { color: C.soft }, grid: { display: false } }
+            }
+        }
+    });
+}
+
+// ── KUMULYATIV DAROMAD ──
+new Chart(document.getElementById('cumChart'), {
+    type: 'line',
+    data: {
+        labels: J('d-cum-labels'),
+        datasets: [{
+            label: 'Jami daromad (kumulyativ)', data: J('d-cum-revenue'),
+            borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.18)',
+            fill: true, tension: 0.32, pointRadius: 5, pointHoverRadius: 7,
+            borderWidth: 2.5,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: C.soft, font: { size: 12 } } },
+            tooltip: { callbacks: { label: c => sum(c.parsed.y) } }
+        },
+        scales: {
+            x: { ticks: { color: C.muted }, grid: { color: C.grid } },
+            y: { ticks: { color: C.muted }, grid: { color: C.grid }, beginAtZero: true }
         }
     }
 });

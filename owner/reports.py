@@ -20,6 +20,15 @@ SERVICE_LABELS = {
 }
 OTHER_LABEL = 'Boshqa'
 
+STATUS_COLORS = {
+    'pending':     '#f59e0b',
+    'accepted':    '#5483B3',
+    'in_progress': '#00c8ff',
+    'completed':   '#00e87a',
+    'rejected':    '#ff4d6a',
+    'cancelled':   '#7aaabf',
+}
+
 
 def _first_of_month(d):
     return d.replace(day=1)
@@ -103,6 +112,54 @@ def _gather_stats():
             'revenue': int(qs.aggregate(t=Sum('total_price'))['t'] or 0),
         })
 
+    # ── Kunlik daromad (oxirgi 30 kun) ──
+    day_labels  = []
+    day_revenue = []
+    for i in range(29, -1, -1):
+        d = today - timedelta(days=i)
+        rev = int(
+            completed.filter(created_at__date=d)
+            .aggregate(t=Sum('total_price'))['t'] or 0
+        )
+        day_labels.append(d.strftime('%d.%m'))
+        day_revenue.append(rev)
+
+    # ── TOP-5 ishchilar (yakunlangan buyurtmalar bo'yicha) ──
+    worker_rows = (
+        completed.values('worker')
+        .annotate(orders=Count('id'), revenue=Sum('total_price'))
+        .order_by('-revenue')[:5]
+    )
+    worker_ids = [r['worker'] for r in worker_rows]
+    worker_users = {u.id: u for u in User.objects.filter(id__in=worker_ids)}
+    top_workers = []
+    for r in worker_rows:
+        u = worker_users.get(r['worker'])
+        name = (u.get_full_name() or u.email or u.username) if u else f"#{r['worker']}"
+        top_workers.append({
+            'name':    name,
+            'orders':  r['orders'],
+            'revenue': int(r['revenue'] or 0),
+        })
+
+    # ── Buyurtmalar holati taqsimoti (barcha buyurtmalar) ──
+    status_label_map = dict(Order.Status.choices)
+    status_order = ['pending', 'accepted', 'in_progress', 'completed', 'rejected', 'cancelled']
+    status_counts = {
+        r['status']: r['c']
+        for r in Order.objects.values('status').annotate(c=Count('id'))
+    }
+    statuses = []
+    for code in status_order:
+        cnt = status_counts.get(code, 0)
+        if cnt:
+            statuses.append({
+                'code':  code,
+                'label': str(status_label_map.get(code, code)),
+                'value': cnt,
+                'color': STATUS_COLORS.get(code, '#5483B3'),
+            })
+
     # ── Joriy oy vs o'tgan oy ──
     cm_start = _first_of_month(today)
     pm_start = (cm_start - timedelta(days=1)).replace(day=1)
@@ -119,6 +176,13 @@ def _gather_stats():
     else:
         growth = 100.0 if cur_month_rev else 0.0
 
+    # ── Kumulyativ daromad (oxirgi 6 oy yig'indisi) ──
+    cumulative = []
+    running = 0
+    for m in monthly:
+        running += m['revenue']
+        cumulative.append(running)
+
     return {
         'total_orders':   total_orders,
         'total_revenue':  total_revenue,
@@ -130,6 +194,11 @@ def _gather_stats():
         'cur_month_rev':  cur_month_rev,
         'prev_month_rev': prev_month_rev,
         'growth':         growth,
+        'day_labels':     day_labels,
+        'day_revenue':    day_revenue,
+        'top_workers':    top_workers,
+        'statuses':       statuses,
+        'cumulative':     cumulative,
     }
 
 
@@ -138,16 +207,29 @@ def reports(request):
     stats = _gather_stats()
     ctx = dict(stats)
     ctx.update({
-        'top_labels':  [c['name'] for c in stats['top_customers']],
-        'top_values':  [c['revenue'] for c in stats['top_customers']],
-        'svc_labels':  [s['label'] for s in stats['services']],
-        'svc_values':  [s['revenue'] for s in stats['services']],
-        'm_labels':    [m['label'] for m in stats['monthly']],
-        'm_revenue':   [m['revenue'] for m in stats['monthly']],
-        'm_orders':    [m['orders'] for m in stats['monthly']],
-        'w_labels':    [w['label'] for w in stats['weekly']],
-        'w_revenue':   [w['revenue'] for w in stats['weekly']],
-        'today':       timezone.localdate().strftime('%d.%m.%Y'),
+        'top_labels':    [c['name'] for c in stats['top_customers']],
+        'top_values':    [c['revenue'] for c in stats['top_customers']],
+        'svc_labels':    [s['label'] for s in stats['services']],
+        'svc_values':    [s['revenue'] for s in stats['services']],
+        'm_labels':      [m['label'] for m in stats['monthly']],
+        'm_revenue':     [m['revenue'] for m in stats['monthly']],
+        'm_orders':      [m['orders'] for m in stats['monthly']],
+        'w_labels':      [w['label'] for w in stats['weekly']],
+        'w_revenue':     [w['revenue'] for w in stats['weekly']],
+        # YANGI: kunlik daromad
+        'd_labels':      stats['day_labels'],
+        'd_revenue':     stats['day_revenue'],
+        # YANGI: top ishchilar
+        'wk_labels':     [w['name'] for w in stats['top_workers']],
+        'wk_revenue':    [w['revenue'] for w in stats['top_workers']],
+        'wk_orders':     [w['orders'] for w in stats['top_workers']],
+        # YANGI: status taqsimoti
+        'st_labels':     [s['label'] for s in stats['statuses']],
+        'st_values':     [s['value'] for s in stats['statuses']],
+        'st_colors':     [s['color'] for s in stats['statuses']],
+        # YANGI: kumulyativ
+        'cum_revenue':   stats['cumulative'],
+        'today':         timezone.localdate().strftime('%d.%m.%Y'),
     })
     return render(request, 'owner/reports.html', ctx)
 
