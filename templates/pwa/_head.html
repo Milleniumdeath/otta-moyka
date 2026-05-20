@@ -1,0 +1,53 @@
+{% load static %}
+{# ── PWA: o'rnatiladigan ilova ── #}
+<link rel="manifest" href="{% url 'pwa_manifest' %}">
+<meta name="theme-color" content="#050a0f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OTTA Moyka">
+<link rel="icon" type="image/png" href="{% static 'pwa/favicon.png' %}">
+<link rel="apple-touch-icon" href="{% static 'pwa/apple-touch-icon.png' %}">
+<script>
+(function () {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
+    });
+  }
+
+  // "Bosh ekranga qo'shish" tugmasi
+  var deferred = null;
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferred = e;
+    showInstallButton();
+  });
+
+  function showInstallButton() {
+    if (document.getElementById('pwa-install-btn')) return;
+    var b = document.createElement('button');
+    b.id = 'pwa-install-btn';
+    b.type = 'button';
+    b.textContent = '⬇️ Ilovani o‘rnatish';
+    b.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);' +
+      'z-index:99999;background:#00c8ff;color:#050a0f;border:0;border-radius:30px;' +
+      'padding:13px 24px;font:600 15px/1 inherit;box-shadow:0 8px 28px rgba(0,200,255,.35);' +
+      'cursor:pointer;font-family:inherit;';
+    b.addEventListener('click', function () {
+      if (!deferred) return;
+      deferred.prompt();
+      deferred.userChoice.finally(function () {
+        deferred = null;
+        b.remove();
+      });
+    });
+    document.body.appendChild(b);
+  }
+
+  window.addEventListener('appinstalled', function () {
+    var b = document.getElementById('pwa-install-btn');
+    if (b) b.remove();
+  });
+})();
+</script>
