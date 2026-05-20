@@ -214,9 +214,8 @@ def accept_order(request, pk):
         if order.status == Order.Status.PENDING:
             order.status = Order.Status.ACCEPTED
             order.save()
-            if order.service_ad:
-                order.service_ad.is_active = False
-                order.service_ad.save()
+            # E'lon `is_active` ni o'zgartirmaymiz — ishchi band/bo'sh ekani
+            # `worker_is_busy` annotation (Exists subquery) orqali aniqlanadi.
             messages.success(request, "Buyurtma qabul qilindi!")
     return redirect('worker:orders')
 
@@ -240,9 +239,8 @@ def complete_order(request, pk):
             order.status = Order.Status.COMPLETED
             order.completed_at = timezone.now()
             order.save()
-            if order.service_ad:
-                order.service_ad.is_active = True
-                order.service_ad.save()
+            # E'lon avtomatik "bo'sh" holatga qaytadi — boshqa faol buyurtmasi
+            # bo'lmasa worker_is_busy = False bo'ladi.
             messages.success(request, "Buyurtma yakunlandi! Tanga yig'ildi 🪙")
     return redirect('worker:orders')
 

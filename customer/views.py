@@ -122,10 +122,21 @@ def orders(request):
         selected_car = cars.first()
 
     # Mashina turiga qarab e'lonlarni filtrlaymiz
-    from django.db.models import Avg, Count, F
+    from django.db.models import Avg, Count, F, Exists, OuterRef
+    # Ishchi band bo'lsa (qabul qilgan yoki jarayondagi buyurtmasi bo'lsa)
+    # — e'londa "band" deb ko'rsatamiz. PENDING band hisoblanmaydi: ishchi
+    # hali tanlash bosqichida, bir vaqtda bir necha so'rov turishi mumkin.
+    busy_subq = Order.objects.filter(
+        worker_id=OuterRef('worker_id'),
+        status__in=[
+            Order.Status.ACCEPTED,
+            Order.Status.IN_PROGRESS,
+        ],
+    )
     ads = ServiceAd.objects.filter(is_active=True).select_related('worker').annotate(
         worker_avg=Avg('worker__worker_orders__review__rating'),
         worker_reviews=Count('worker__worker_orders__review', distinct=True),
+        worker_is_busy=Exists(busy_subq),
     ).order_by(F('worker_avg').desc(nulls_last=True), '-created_at')
 
     if selected_car:
@@ -157,6 +168,22 @@ def book_order(request, ad_pk):
             return redirect('customer:orders')
 
         car = get_object_or_404(Car, pk=car_id, owner=request.user)
+
+        # ✅ Ishchi hozir band emasligini tekshirish (qabul qilingan yoki jarayonda)
+        is_busy = Order.objects.filter(
+            worker=ad.worker,
+            status__in=[
+                Order.Status.ACCEPTED,
+                Order.Status.IN_PROGRESS,
+            ],
+        ).exists()
+        if is_busy:
+            messages.error(
+                request,
+                "Bu ishchi hozir band. Iltimos, biroz keyin urinib ko'ring "
+                "yoki boshqa ishchining e'lonidan buyurtma bering."
+            )
+            return redirect('customer:orders')
 
         # ✅ Mashina turiga moslik tekshiruvi
         if ad.service_type == 'heavy' and car.car_type != 'heavy':
@@ -196,10 +223,8 @@ def book_order(request, ad_pk):
             scheduled_time=scheduled,   # ✅ saqlash
         )
 
-        # ✅ Agar zudlik bilan bo‘lsa, e'lonni nofaol qilish
-        if not scheduled:
-            ad.is_active = False
-            ad.save()
+        # Eslatma: e'lon `is_active` ni qo'lda o'zgartirmaymiz — "band" holati
+        # buyurtma statusidan kelib chiqib hisoblanadi (worker_is_busy annotation).
 
         messages.success(request, "Buyurtma berildi! Ishchi tasdiqlashini kuting.")
     return redirect('customer:order_history')

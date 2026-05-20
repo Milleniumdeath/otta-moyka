@@ -123,7 +123,12 @@
         {% endif %}
     </div>
 
-    {% if cars %}
+    {% if ad.worker_is_busy %}
+    <button class="btn btn-busy" style="width:100%;" disabled
+            title="Ishchi boshqa buyurtma bilan band">
+        <i class="fa-solid fa-hourglass-half"></i> Ishchi hozir band
+    </button>
+    {% elif cars %}
     <button class="btn btn-primary" style="width:100%;"
             onclick="showOrder({{ ad.pk }}, '{{ ad.title }}', {{ ad.price }}, '{{ ad.worker.get_full_name }}')">
         <i class="fa-solid fa-clipboard-check"></i> Buyurtma Berish
@@ -338,6 +343,25 @@
     color: var(--cyan);
 }
 .time-type-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* Ishchi band — sariq disabled tugma */
+.btn.btn-busy {
+    background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.08));
+    color: var(--amber, #f59e0b);
+    border: 1.5px solid rgba(245,158,11,0.45);
+    cursor: not-allowed;
+    font-weight: 700;
+    letter-spacing: .3px;
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.05);
+    position: relative;
+}
+.btn.btn-busy i {
+    animation: busyHg 1.6s ease-in-out infinite;
+}
+@keyframes busyHg {
+    0%,100% { transform: rotate(0deg); }
+    50%     { transform: rotate(180deg); }
+}
 </style>
 
 {% endblock %}
