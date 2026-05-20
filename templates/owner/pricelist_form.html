@@ -4,66 +4,262 @@
 {% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
 
 {% block content %}
-<div class="page-header">
-  <h2><i class="fas fa-tag"></i> Narx Belgilash</h2>
-  <a href="{% url 'owner:pricelist' %}" class="btn-outline">
-    <i class="fas fa-arrow-left"></i> Orqaga
-  </a>
-</div>
+<div class="pl-wrap">
 
-<div class="form-card">
-  <form method="post">
+  <div class="pl-head">
+    <div class="pl-title">
+      <div class="pl-icon"><i class="fas fa-tag"></i></div>
+      <div>
+        <h1>Narx Belgilash</h1>
+        <p>Mijozlar va ishchilar uchun xizmat narxlarini sozlang</p>
+      </div>
+    </div>
+    <a href="{% url 'owner:pricelist' %}" class="pl-back">
+      <i class="fas fa-arrow-left"></i><span>Orqaga</span>
+    </a>
+  </div>
+
+  <form method="post" class="pl-card" autocomplete="off">
     {% csrf_token %}
-    <div class="form-group">
-      <label>Xizmat turi</label>
+
+    <div class="pl-field">
+      <label class="pl-label"><i class="fas fa-wrench"></i> Xizmat turi</label>
       {{ form.service_type }}
     </div>
-    <div class="form-row three-col">
-      <div class="form-group">
-        <label><i class="fas fa-arrow-down" style="color:#2ecc71"></i> Minimal narx</label>
-        {{ form.min_price }}
+
+    <div class="pl-section">
+      <span class="pl-line"></span>
+      <span class="pl-section-text"><i class="fas fa-coins"></i> Narx oralig'i</span>
+      <span class="pl-line"></span>
+    </div>
+
+    <div class="pl-prices">
+      <div class="pl-price pl-min">
+        <div class="pl-chip"><i class="fas fa-arrow-down"></i></div>
+        <div class="pl-price-body">
+          <span class="pl-price-label">Minimal</span>
+          {{ form.min_price }}
+          <span class="pl-price-suffix">so'm</span>
+        </div>
       </div>
-      <div class="form-group">
-        <label><i class="fas fa-star" style="color:var(--accent2)"></i> Tavsiya etilgan</label>
-        {{ form.recommended_price }}
+      <div class="pl-price pl-rec">
+        <div class="pl-chip"><i class="fas fa-star"></i></div>
+        <div class="pl-price-body">
+          <span class="pl-price-label">Tavsiya etilgan</span>
+          {{ form.recommended_price }}
+          <span class="pl-price-suffix">so'm</span>
+        </div>
       </div>
-      <div class="form-group">
-        <label><i class="fas fa-arrow-up" style="color:#e74c3c"></i> Maksimal narx</label>
-        {{ form.max_price }}
+      <div class="pl-price pl-max">
+        <div class="pl-chip"><i class="fas fa-arrow-up"></i></div>
+        <div class="pl-price-body">
+          <span class="pl-price-label">Maksimal</span>
+          {{ form.max_price }}
+          <span class="pl-price-suffix">so'm</span>
+        </div>
       </div>
     </div>
-    <div class="form-group">
-      <label>Tavsif (ixtiyoriy)</label>
+
+    <div class="pl-field" style="margin-top:24px">
+      <label class="pl-label"><i class="fas fa-pen"></i> Tavsif <em>ixtiyoriy</em></label>
       {{ form.description }}
     </div>
-    <div class="form-group check-group">
+
+    <label class="pl-toggle">
       {{ form.is_active }}
-      <label>Faol (ishchilar ko'rishi uchun)</label>
-    </div>
+      <span class="pl-toggle-track"><span class="pl-toggle-thumb"></span></span>
+      <span class="pl-toggle-text">
+        <strong>Faol</strong>
+        <small>Ishchilar bu narx ro'yxatini ko'radi</small>
+      </span>
+    </label>
+
     {% if form.errors %}
-      <div class="error-box">{{ form.errors }}</div>
+      <div class="pl-error">
+        <i class="fas fa-circle-exclamation"></i>
+        <div>{{ form.errors }}</div>
+      </div>
     {% endif %}
-    <button type="submit" class="btn-primary full-width">
-      <i class="fas fa-save"></i> Saqlash
+
+    <button type="submit" class="pl-submit">
+      <i class="fas fa-floppy-disk"></i> Saqlash
     </button>
   </form>
 </div>
 
 <style>
-.form-card { background: var(--bg2); border: 1px solid var(--muted);
-  border-radius: 14px; padding: 28px; max-width: 560px; margin: 20px auto; }
-.form-row.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
-.form-group { margin-bottom: 18px; }
-.form-group label { display: block; color: var(--text); margin-bottom: 6px; font-size: 13px; }
-.form-group select, .form-group input, .form-group textarea {
-  width: 100%; background: var(--bg); border: 1px solid var(--muted);
-  border-radius: 8px; padding: 10px 12px; color: var(--text); }
-.check-group { display: flex; align-items: center; gap: 10px; }
-.check-group input { width: auto; }
-.check-group label { margin: 0; }
-.error-box { background: rgba(231,76,60,0.15); border-left: 3px solid #e74c3c;
-  padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; color: #e74c3c; font-size: 13px; }
-.full-width { width: 100%; justify-content: center; }
+.pl-wrap { max-width: 760px; margin: 18px auto 60px; padding: 0 16px;
+  animation: plIn .55s cubic-bezier(.22,1,.36,1) both; }
+@keyframes plIn { from{opacity:0;transform:translateY(14px);} to{opacity:1;transform:translateY(0);} }
+
+/* HEADER */
+.pl-head { display:flex; justify-content:space-between; align-items:center;
+  gap:16px; margin-bottom:24px; flex-wrap:wrap; }
+.pl-title { display:flex; align-items:center; gap:14px; }
+.pl-icon {
+  width:52px; height:52px; border-radius:14px;
+  display:grid; place-items:center; font-size:22px; color:#fff;
+  background: linear-gradient(135deg, var(--cyan, #00c8ff), var(--accent, #5483B3));
+  box-shadow: 0 10px 26px -10px rgba(0,200,255,.6);
+}
+.pl-title h1 {
+  margin:0; font-size:24px; letter-spacing:.4px; color:var(--text);
+  background: linear-gradient(120deg, var(--text), var(--cyan, #00c8ff));
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.pl-title p { margin:3px 0 0; color:var(--soft, #7aaabf); font-size:13px; }
+.pl-back {
+  display:inline-flex; align-items:center; gap:8px;
+  padding:10px 16px; border-radius:12px; text-decoration:none;
+  background: var(--card); border:1px solid var(--border);
+  color: var(--text); font-size:13px;
+  transition: transform .25s ease, border-color .25s ease, color .25s ease;
+}
+.pl-back:hover { transform: translateX(-3px); border-color: var(--cyan, #00c8ff); color: var(--cyan, #00c8ff); }
+
+/* CARD */
+.pl-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px; padding: 28px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px -22px rgba(0,0,0,.5), 0 1px 0 rgba(255,255,255,.05) inset;
+}
+
+/* FIELDS */
+.pl-field { margin-bottom: 18px; }
+.pl-label {
+  display:flex; align-items:center; gap:8px;
+  font-size:13px; color:var(--text); margin-bottom:8px;
+  font-weight:600; letter-spacing:.3px;
+}
+.pl-label i { color: var(--cyan, #00c8ff); }
+.pl-label em { font-style:normal; color:var(--soft, #7aaabf); font-size:11px; font-weight:400; margin-left:auto; }
+
+.pl-card select,
+.pl-card input[type=text], .pl-card input[type=number],
+.pl-card textarea {
+  width:100%; box-sizing:border-box;
+  background: var(--bg); color: var(--text);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; font-size: 14px; font-family: inherit;
+  outline:none;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.pl-card select:focus,
+.pl-card input:focus, .pl-card textarea:focus {
+  border-color: var(--cyan, #00c8ff);
+  box-shadow: 0 0 0 4px rgba(0,200,255,.15);
+}
+.pl-card textarea { min-height: 96px; resize: vertical; }
+
+/* SECTION DIVIDER */
+.pl-section { display:flex; align-items:center; gap:12px; margin: 26px 0 22px;
+  color: var(--soft, #7aaabf); font-size:11px; letter-spacing:1.8px; text-transform:uppercase; }
+.pl-line { flex:1; height:1px; background: linear-gradient(90deg, transparent, var(--border), transparent); }
+.pl-section-text { display:inline-flex; gap:6px; align-items:center; font-weight:600; }
+.pl-section-text i { color: var(--amber, #f59e0b); }
+
+/* PRICES */
+.pl-prices { display:grid; grid-template-columns: repeat(3, 1fr); gap:18px; margin-bottom:8px; }
+.pl-price {
+  position:relative; padding:18px 14px 14px;
+  background: var(--bg); border:1.5px solid var(--border);
+  border-radius:14px;
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+.pl-price:hover { transform: translateY(-3px); }
+.pl-min { --pl-c:#2ecc71; }
+.pl-rec { --pl-c: var(--accent2, #0f8f98); border-color: rgba(15,143,152,.45);
+  box-shadow: 0 6px 22px -10px rgba(15,143,152,.55); }
+.pl-max { --pl-c:#e74c3c; }
+.pl-price:hover { border-color: var(--pl-c); }
+.pl-chip {
+  position:absolute; top:-16px; left:14px;
+  width:36px; height:36px; border-radius:11px;
+  display:grid; place-items:center;
+  background: var(--pl-c); color:#fff; font-size:14px;
+  box-shadow: 0 8px 18px -8px var(--pl-c);
+}
+.pl-price-body { padding-top:10px; display:flex; flex-direction:column; gap:6px; position:relative; }
+.pl-price-label { font-size:10.5px; text-transform:uppercase; letter-spacing:1.2px;
+  color: var(--soft, #7aaabf); font-weight:700; }
+.pl-price-body input { padding-right: 48px !important; font-weight:600; font-size:15px; }
+.pl-price-body input:focus { border-color: var(--pl-c) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pl-c) 18%, transparent) !important; }
+.pl-price-suffix { position:absolute; right:12px; bottom:12px;
+  font-size:11.5px; color: var(--soft, #7aaabf); pointer-events:none; font-weight:600; }
+
+/* TOGGLE */
+.pl-toggle {
+  display:flex; align-items:center; gap:14px;
+  padding: 14px 16px; margin: 22px 0 6px;
+  background: var(--bg); border:1.5px solid var(--border);
+  border-radius:12px; cursor:pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.pl-toggle:hover { border-color: var(--cyan, #00c8ff); }
+.pl-toggle input { position:absolute; opacity:0; width:0; height:0; pointer-events:none; }
+.pl-toggle-track {
+  position:relative; width:44px; height:24px; flex-shrink:0;
+  border-radius:999px; background:var(--border);
+  transition: background .25s ease;
+}
+.pl-toggle-thumb {
+  position:absolute; top:2px; left:2px;
+  width:20px; height:20px; border-radius:50%;
+  background:#fff; box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+}
+.pl-toggle input:checked ~ .pl-toggle-track { background: linear-gradient(135deg, var(--cyan, #00c8ff), var(--accent2, #0f8f98)); }
+.pl-toggle input:checked ~ .pl-toggle-track .pl-toggle-thumb { transform: translateX(20px); }
+.pl-toggle-text strong { display:block; color: var(--text); font-size:14px; font-weight:600; }
+.pl-toggle-text small { color: var(--soft, #7aaabf); font-size:12px; }
+
+/* ERROR */
+.pl-error {
+  display:flex; gap:10px; align-items:flex-start;
+  margin: 18px 0 0; padding: 12px 14px;
+  background: rgba(255,77,106,.1);
+  border:1px solid rgba(255,77,106,.25);
+  border-left: 3px solid var(--red, #ff4d6a);
+  color: var(--red, #ff4d6a);
+  border-radius: 10px; font-size: 13px;
+}
+.pl-error ul { margin:0; padding-left: 16px; }
+.pl-error i { margin-top:2px; }
+
+/* SUBMIT */
+.pl-submit {
+  width:100%; margin-top: 22px;
+  padding: 14px 22px; border:0; border-radius: 14px;
+  background: linear-gradient(135deg, var(--cyan, #00c8ff), var(--accent, #5483B3));
+  color:#fff; font-weight:700; font-size:15px; letter-spacing:.5px;
+  display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  cursor:pointer;
+  transition: transform .2s ease, box-shadow .25s ease, filter .2s ease;
+  box-shadow: 0 12px 30px -12px rgba(0,200,255,.6);
+}
+.pl-submit:hover { transform: translateY(-2px); filter: brightness(1.07);
+  box-shadow: 0 16px 38px -12px rgba(0,200,255,.75); }
+.pl-submit:active { transform: translateY(0); }
+.pl-submit i { transition: transform .25s ease; }
+.pl-submit:hover i { transform: scale(1.18) rotate(-8deg); }
+
+/* MOBILE */
+@media (max-width: 640px) {
+  .pl-prices { grid-template-columns: 1fr; gap: 24px; }
+  .pl-head { flex-direction: column-reverse; align-items: flex-start; }
+  .pl-back { align-self: flex-end; }
+  .pl-title h1 { font-size: 20px; }
+  .pl-card { padding: 22px 18px; }
+}
+
+/* REDUCED MOTION */
+@media (prefers-reduced-motion: reduce) {
+  .pl-wrap, .pl-price, .pl-submit, .pl-back, .pl-toggle-thumb {
+    animation: none !important; transition: none !important;
+  }
+}
 </style>
 {% endblock %}
-
