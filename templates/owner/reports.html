@@ -72,11 +72,23 @@
 </div>
 
 {% if total_orders == 0 %}
-<div class="empty-state">
-    <div class="empty-icon"><i class="fa-solid fa-chart-pie"></i></div>
-    <p>Hozircha yakunlangan buyurtmalar yo'q. Statistika buyurtmalar yakunlangach paydo bo'ladi.</p>
+<div class="rep-empty-note">
+    <i class="fa-solid fa-circle-info"></i>
+    <div>
+        <strong>Hali yakunlangan buyurtma yo'q.</strong>
+        Pastdagi diagrammalar buyurtmalar yakunlanishi bilan avtomatik to'ldiriladi.
+    </div>
 </div>
-{% else %}
+<style>
+.rep-empty-note { display:flex; gap:12px; align-items:flex-start;
+    background:rgba(84,131,179,0.10); border:1px solid var(--border);
+    border-left:3px solid var(--accent2); border-radius:12px;
+    padding:14px 16px; margin-bottom:20px; font-size:13.5px; color:var(--soft); }
+.rep-empty-note strong { color:var(--text); display:block; margin-bottom:2px; }
+.rep-empty-note i { color:var(--cyan); font-size:18px; margin-top:2px; }
+.rep-empty-inner { padding:32px 0; text-align:center; color:var(--muted); font-size:13px; }
+</style>
+{% endif %}
 
 <div class="rep-2col">
     <div class="chart-wrap" style="margin-bottom:0;">
@@ -186,11 +198,9 @@
 {{ st_colors|json_script:"d-st-colors" }}
 {{ cum_revenue|json_script:"d-cum-revenue" }}
 {{ m_labels|json_script:"d-cum-labels" }}
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}
-{% if total_orders > 0 %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 const J = id => JSON.parse(document.getElementById(id).textContent);
@@ -396,5 +406,4 @@ new Chart(document.getElementById('cumChart'), {
     }
 });
 </script>
-{% endif %}
 {% endblock %}
