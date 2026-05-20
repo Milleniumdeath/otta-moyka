@@ -96,12 +96,28 @@ def dashboard(request):
 # ─────────────────────────────────────────────────────────────
 @owner_required
 def workers(request):
+    from django.db.models import Avg, Count, F
+
     pending  = User.objects.filter(role=User.Role.WORKER, is_approved=False)
-    approved = User.objects.filter(role=User.Role.WORKER, is_approved=True)
+    approved = User.objects.filter(
+        role=User.Role.WORKER, is_approved=True
+    ).annotate(
+        avg_rating=Avg('worker_orders__review__rating'),
+        review_count=Count('worker_orders__review', distinct=True),
+    ).order_by(F('avg_rating').desc(nulls_last=True))
+
+    # Past reytingli ishchilar (kamida 3 ta baho, o'rtacha < 3.0) — nazorat uchun
+    low_rated = [
+        w for w in approved
+        if w.review_count >= 3 and w.avg_rating is not None and w.avg_rating < 3.0
+    ]
+
     return render(request, 'owner/workers.html', {
         'pending_workers':  pending,
         'approved_workers': approved,
         'pending_count':    pending.count(),
+        'low_rated':        low_rated,
+        'low_rated_count':  len(low_rated),
     })
 
 

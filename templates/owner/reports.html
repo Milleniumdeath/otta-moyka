@@ -1,0 +1,256 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Statistika & Hisobot{% endblock %}
+{% block page_title %}Statistika & Hisobot{% endblock %}
+
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+
+{% block extra_style %}
+<style>
+.rep-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px; }
+.rep-head-sub { font-size:13px; color:var(--muted); margin-top:4px; }
+.chart-wrap {
+    background:var(--glass); backdrop-filter:blur(16px);
+    border:1px solid var(--border); border-radius:16px;
+    padding:24px; margin-bottom:24px;
+}
+.chart-title { font-size:15px; font-weight:700; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+.chart-title i { color:var(--cyan); }
+.rep-2col { display:grid; grid-template-columns:1.4fr 1fr; gap:20px; margin-bottom:24px; }
+.rep-list { list-style:none; }
+.rep-list li { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border2); font-size:14px; }
+.rep-list li:last-child { border-bottom:none; }
+.rep-list .rl-name { color:var(--text); font-weight:600; display:flex; align-items:center; gap:8px; }
+.rep-list .rl-rank { width:24px; height:24px; border-radius:50%; background:rgba(84,131,179,0.15); color:var(--accent2); font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.rep-list .rl-rank.gold { background:rgba(245,158,11,0.18); color:var(--amber); }
+.rep-list .rl-val { color:var(--accent2); font-weight:700; }
+.rep-list .rl-sub { font-size:12px; color:var(--muted); }
+.svc-best { background:linear-gradient(135deg,rgba(84,131,179,0.14),transparent); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:18px; }
+.svc-best-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-weight:700; }
+.svc-best-name { font-family:'Bebas Neue',sans-serif; font-size:26px; color:var(--text); margin:4px 0; letter-spacing:1px; }
+.svc-best-val { font-size:15px; color:var(--accent2); font-weight:700; }
+@media(max-width:900px){ .rep-2col { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rep-head">
+    <div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;">Biznes statistikasi</div>
+        <div class="rep-head-sub">Hisobot sanasi: {{ today }}</div>
+    </div>
+    <a href="{% url 'owner:report_pdf' %}" class="btn btn-primary">
+        <i class="fa-solid fa-file-pdf"></i> PDF hisobot yuklab olish
+    </a>
+</div>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-check-double"></i></div>
+        <div class="stat-label">Yakunlangan buyurtma</div>
+        <div class="stat-value accent">{{ total_orders }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="fa-solid fa-sack-dollar"></i></div>
+        <div class="stat-label">Umumiy daromad</div>
+        <div class="stat-value green">{{ total_revenue }}</div>
+        <div class="stat-sub">so'm</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon"><i class="fa-solid fa-calendar-day"></i></div>
+        <div class="stat-label">Joriy oy daromadi</div>
+        <div class="stat-value">{{ cur_month_rev }}</div>
+        <div class="stat-sub">so'm</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon {% if growth >= 0 %}green{% else %}red{% endif %}">
+            <i class="fa-solid {% if growth >= 0 %}fa-arrow-trend-up{% else %}fa-arrow-trend-down{% endif %}"></i>
+        </div>
+        <div class="stat-label">Oylik o'sish</div>
+        <div class="stat-value {% if growth >= 0 %}green{% else %}red{% endif %}">{{ growth }}%</div>
+        <div class="stat-sub">o'tgan oyga nisbatan</div>
+    </div>
+</div>
+
+{% if total_orders == 0 %}
+<div class="empty-state">
+    <div class="empty-icon"><i class="fa-solid fa-chart-pie"></i></div>
+    <p>Hozircha yakunlangan buyurtmalar yo'q. Statistika buyurtmalar yakunlangach paydo bo'ladi.</p>
+</div>
+{% else %}
+
+<div class="rep-2col">
+    <div class="chart-wrap" style="margin-bottom:0;">
+        <div class="chart-title"><i class="fa-solid fa-trophy"></i> Eng ko'p daromad keltirgan mijozlar — TOP-10</div>
+        <canvas id="topChart" height="160"></canvas>
+    </div>
+    <div class="chart-wrap" style="margin-bottom:0;">
+        <div class="chart-title"><i class="fa-solid fa-list-ol"></i> Reyting</div>
+        <ul class="rep-list">
+            {% for c in top_customers %}
+            <li>
+                <span class="rl-name">
+                    <span class="rl-rank {% if forloop.counter <= 3 %}gold{% endif %}">{{ forloop.counter }}</span>
+                    {{ c.name }}
+                </span>
+                <span style="text-align:right;">
+                    <div class="rl-val">{{ c.revenue }} so'm</div>
+                    <div class="rl-sub">{{ c.orders }} ta buyurtma</div>
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="rep-2col">
+    <div class="chart-wrap" style="margin-bottom:0;">
+        <div class="chart-title"><i class="fa-solid fa-chart-pie"></i> Xizmat turi bo'yicha daromad</div>
+        <canvas id="svcChart" height="170"></canvas>
+    </div>
+    <div class="chart-wrap" style="margin-bottom:0;">
+        <div class="chart-title"><i class="fa-solid fa-star"></i> Xizmat turlari</div>
+        {% if top_service %}
+        <div class="svc-best">
+            <div class="svc-best-label">Eng daromadli xizmat</div>
+            <div class="svc-best-name">{{ top_service.label }}</div>
+            <div class="svc-best-val">{{ top_service.revenue }} so'm · {{ top_service.orders }} ta</div>
+        </div>
+        {% endif %}
+        <ul class="rep-list">
+            {% for s in services %}
+            <li>
+                <span class="rl-name">{{ s.label }}</span>
+                <span style="text-align:right;">
+                    <div class="rl-val">{{ s.revenue }} so'm</div>
+                    <div class="rl-sub">{{ s.orders }} ta</div>
+                </span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<div class="chart-wrap">
+    <div class="chart-title"><i class="fa-solid fa-chart-column"></i> Oylik taqqoslash — oxirgi 6 oy</div>
+    <canvas id="monthChart" height="90"></canvas>
+</div>
+
+<div class="chart-wrap">
+    <div class="chart-title"><i class="fa-solid fa-chart-line"></i> Haftalik taqqoslash — oxirgi 8 hafta</div>
+    <canvas id="weekChart" height="90"></canvas>
+</div>
+
+{{ top_labels|json_script:"d-top-labels" }}
+{{ top_values|json_script:"d-top-values" }}
+{{ svc_labels|json_script:"d-svc-labels" }}
+{{ svc_values|json_script:"d-svc-values" }}
+{{ m_labels|json_script:"d-m-labels" }}
+{{ m_revenue|json_script:"d-m-revenue" }}
+{{ m_orders|json_script:"d-m-orders" }}
+{{ w_labels|json_script:"d-w-labels" }}
+{{ w_revenue|json_script:"d-w-revenue" }}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if total_orders > 0 %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const J = id => JSON.parse(document.getElementById(id).textContent);
+const C = { soft:'#7aaabf', muted:'#3d6070', grid:'rgba(255,255,255,0.05)' };
+const sum = v => v.toLocaleString() + " so'm";
+const palette = ['#5483B3','#00c8ff','#00e87a','#f59e0b','#c084fc','#ff4d6a','#0f8f98','#7aaabf'];
+
+new Chart(document.getElementById('topChart'), {
+    type: 'bar',
+    data: {
+        labels: J('d-top-labels'),
+        datasets: [{
+            label: 'Daromad', data: J('d-top-values'),
+            backgroundColor: 'rgba(84,131,179,0.35)',
+            borderColor: '#5483B3', borderWidth: 2, borderRadius: 6,
+        }]
+    },
+    options: {
+        indexAxis: 'y', responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: c => sum(c.parsed.x) } }
+        },
+        scales: {
+            x: { ticks: { color: C.muted }, grid: { color: C.grid } },
+            y: { ticks: { color: C.soft }, grid: { display: false } }
+        }
+    }
+});
+
+new Chart(document.getElementById('svcChart'), {
+    type: 'doughnut',
+    data: {
+        labels: J('d-svc-labels'),
+        datasets: [{ data: J('d-svc-values'), backgroundColor: palette, borderWidth: 0 }]
+    },
+    options: {
+        responsive: true, cutout: '60%',
+        plugins: {
+            legend: { position: 'bottom', labels: { color: C.soft, font: { size: 12 }, padding: 14 } },
+            tooltip: { callbacks: { label: c => c.label + ': ' + sum(c.parsed) } }
+        }
+    }
+});
+
+new Chart(document.getElementById('monthChart'), {
+    data: {
+        labels: J('d-m-labels'),
+        datasets: [
+            {
+                type: 'bar', label: 'Daromad', data: J('d-m-revenue'),
+                backgroundColor: 'rgba(0,232,122,0.25)', borderColor: '#00e87a',
+                borderWidth: 2, borderRadius: 6, yAxisID: 'y',
+            },
+            {
+                type: 'line', label: 'Buyurtmalar', data: J('d-m-orders'),
+                borderColor: '#00c8ff', backgroundColor: '#00c8ff',
+                tension: 0.35, yAxisID: 'y1',
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: C.soft, font: { size: 12 } } },
+            tooltip: { callbacks: { label: c => c.dataset.label === 'Daromad' ? sum(c.parsed.y) : c.parsed.y + ' ta' } }
+        },
+        scales: {
+            x: { ticks: { color: C.muted }, grid: { color: C.grid } },
+            y: { position: 'left', ticks: { color: C.muted }, grid: { color: C.grid } },
+            y1: { position: 'right', ticks: { color: C.muted }, grid: { display: false } }
+        }
+    }
+});
+
+new Chart(document.getElementById('weekChart'), {
+    type: 'line',
+    data: {
+        labels: J('d-w-labels'),
+        datasets: [{
+            label: 'Haftalik daromad', data: J('d-w-revenue'),
+            borderColor: '#5483B3', backgroundColor: 'rgba(84,131,179,0.15)',
+            fill: true, tension: 0.35, pointRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: C.soft, font: { size: 12 } } },
+            tooltip: { callbacks: { label: c => sum(c.parsed.y) } }
+        },
+        scales: {
+            x: { ticks: { color: C.muted }, grid: { color: C.grid } },
+            y: { ticks: { color: C.muted }, grid: { color: C.grid } }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

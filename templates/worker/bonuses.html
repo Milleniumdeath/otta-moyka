@@ -2,17 +2,7 @@
 {% block title %}Bonuslar{% endblock %}
 {% block page_title %}Bonuslar{% endblock %}
 
-{% block sidebar_nav %}
-<a href="{% url 'worker:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
-<a href="{% url 'worker:my_ads' %}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a>
-<a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
-<a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
-<a href="{% url 'worker:bonuses' %}" class="nav-item active"><i class="fa-solid fa-gift"></i> Bonuslar</a>
-<a href="{% url 'worker:schedule_list' %}" class="nav-item"><i class="fa-solid fa-calendar-alt"></i> Ish Jadvalim</a>
-<a href="{% url 'worker:scheduled_orders' %}" class="nav-item"><i class="fa-solid fa-calendar-check"></i> Rejalashtirilgan</a>
-<div class="nav-section">Sozlamalar</div>
-<a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
-{% endblock %}
+{% block sidebar_nav %}{% include 'worker/_sidebar.html' %}{% endblock %}
 
 {% block extra_style %}
 <style>

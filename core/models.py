@@ -336,3 +336,23 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.title}"
+
+
+class WeatherCache(models.Model):
+    """Kunlik ob-havo kesh ma'lumoti"""
+    city = models.CharField(max_length=100, default="Oltiariq")
+    date = models.DateField()
+    rain_probability = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Yomg'ir yog'ish ehtimoli foizda"
+    )
+    description = models.CharField(max_length=200, blank=True)
+    fetched_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('city', 'date')
+        verbose_name = "Ob-havo"
+        verbose_name_plural = "Ob-havo ma'lumotlari"
+
+    def __str__(self):
+        return f"{self.city} {self.date}: {self.rain_probability}%"

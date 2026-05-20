@@ -2,17 +2,7 @@
 {% block title %}Dashboard — Ishchi{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
-{% block sidebar_nav %}
-<a href="{% url 'worker:dashboard' %}" class="nav-item active"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
-<a href="{% url 'worker:my_ads' %}" class="nav-item"><i class="fa-solid fa-bullhorn"></i> E'lonlarim</a>
-<a href="{% url 'worker:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar{% if pending_count %} <span class="nav-badge">{{ pending_count }}</span>{% endif %}</a>
-<a href="{% url 'worker:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
-<a href="{% url 'worker:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
-<a href="{% url 'worker:schedule_list' %}" class="nav-item"><i class="fa-solid fa-calendar-alt"></i> Ish Jadvalim</a>
-<a href="{% url 'worker:scheduled_orders' %}" class="nav-item"><i class="fa-solid fa-calendar-check"></i> Rejalashtirilgan</a>
-<div class="nav-section">Sozlamalar</div>
-<a href="{% url 'worker:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
-{% endblock %}
+{% block sidebar_nav %}{% include 'worker/_sidebar.html' %}{% endblock %}
 
 {% block extra_style %}
 <style>
@@ -106,6 +96,30 @@
                 <div class="g-lbl"><i class="fa-solid fa-hourglass-half"></i> Kutilmoqda</div>
                 <div class="g-val amber">{{ pending_count }}</div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- REYTING -->
+<div class="g-chart" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+        <div class="g-chart-title" style="margin-bottom:6px;">
+            <i class="fa-solid fa-star"></i> Mijozlar bahosi
+        </div>
+        <div style="font-size:13px;color:var(--muted);">
+            {% if rating.count %}
+                {{ rating.count }} ta mijoz baholagan
+            {% else %}
+                Hali baho yo'q — sifatli xizmat ko'rsating
+            {% endif %}
+        </div>
+    </div>
+    <div style="text-align:right;">
+        <div style="color:var(--amber);font-size:22px;letter-spacing:3px;">
+            {% for i in "12345" %}{% if forloop.counter <= rating.stars %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}{% endfor %}
+        </div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--amber);line-height:1.1;">
+            {{ rating.avg|floatformat:1 }}<span style="font-size:16px;color:var(--muted);"> / 5</span>
         </div>
     </div>
 </div>

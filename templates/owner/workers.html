@@ -3,6 +3,23 @@
 {% block page_title %}Ishchilar{% endblock %}
 {% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
 {% block content %}
+{% if low_rated %}
+<div class="alert alert-error" style="margin-bottom:20px;align-items:flex-start;">
+    <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px;"></i>
+    <div>
+        <strong>Nazorat talab qiladi:</strong> {{ low_rated_count }} ta ishchining o'rtacha reytingi past (3.0 dan kam, kamida 3 ta baho).
+        <div style="margin-top:6px;font-size:13px;color:var(--soft);">
+            {% for w in low_rated %}
+            <span style="display:inline-block;margin:2px 8px 2px 0;">
+                <i class="fa-solid fa-user fa-xs"></i> {{ w.get_full_name|default:w.email }}
+                — <span style="color:var(--red);font-weight:700;">{{ w.avg_rating|floatformat:1 }}★</span>
+                ({{ w.review_count }} ta)
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
 {% if pending_workers %}
 <div class="table-card" style="border-color:rgba(245,158,11,0.25);margin-bottom:20px;">
     <div class="table-head">
@@ -24,10 +41,22 @@
 <div class="table-card">
     <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-users-gear"></i> Tasdiqlangan Ishchilar</div></div>
     {% if approved_workers %}
-    <table><thead><tr><th>Ishchi</th><th>Email</th><th>Telefon</th><th>Sodiqlik</th><th>Buyurtmalar</th><th>Amal</th></tr></thead><tbody>
-    {% for w in approved_workers %}<tr>
+    <table><thead><tr><th>Ishchi</th><th>Email</th><th>Telefon</th><th>Reyting</th><th>Sodiqlik</th><th>Buyurtmalar</th><th>Amal</th></tr></thead><tbody>
+    {% for w in approved_workers %}<tr {% if w.review_count >= 3 and w.avg_rating < 3.0 %}style="background:rgba(255,77,106,0.06);"{% endif %}>
         <td><div class="user-cell"><div class="u-ava">{% if w.avatar %}<img src="{{ w.avatar.url }}">{% else %}{{ w.first_name|first|upper }}{% endif %}</div><div><div class="td-main">{{ w.get_full_name|default:"—" }}</div></div></div></td>
         <td>{{ w.email }}</td><td>{{ w.phone|default:"—" }}</td>
+        <td>
+            {% if w.review_count %}
+            <span style="color:var(--amber);letter-spacing:1px;">{% for i in "12345" %}{% if forloop.counter <= w.avg_rating %}<i class="fa-solid fa-star fa-xs"></i>{% else %}<i class="fa-regular fa-star fa-xs"></i>{% endif %}{% endfor %}</span>
+            <span style="font-weight:700;color:var(--amber);margin-left:4px;">{{ w.avg_rating|floatformat:1 }}</span>
+            <span style="font-size:11px;color:var(--muted);">({{ w.review_count }})</span>
+            {% if w.review_count >= 3 and w.avg_rating < 3.0 %}
+            <span class="badge badge-rejected" style="margin-left:6px;"><i class="fa-solid fa-eye fa-xs"></i> Nazorat</span>
+            {% endif %}
+            {% else %}
+            <span style="color:var(--muted);font-size:12px;">— baho yo'q</span>
+            {% endif %}
+        </td>
         <td><div class="loy-bar-wrap"><div class="loy-bar-pct">{{ w.loyalty.loyalty_percentage|default:0 }}%</div><div class="loy-bar"><div class="loy-fill" style="width:{{ w.loyalty.loyalty_percentage|default:0 }}%"></div></div></div></td>
         <td class="td-main">{{ w.worker_orders.count }}</td>
         <td><form method="post" action="{% url 'owner:delete_worker' w.pk %}" onsubmit="return confirm('O\'chirishni tasdiqlaysizmi?')">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i></button></form></td>

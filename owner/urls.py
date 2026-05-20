@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import reports as reports_views
 from finance import views as finance_views
 
 app_name = 'owner'
@@ -17,6 +18,10 @@ urlpatterns = [
     path('bonuses/delete/<int:pk>/',views.delete_bonus,     name='delete_bonus'),
     path('cameras/',                views.cameras,          name='cameras'),
     path('profile/',                views.profile,          name='profile'),
+
+    # Statistika va hisobot
+    path('reports/',                reports_views.reports,    name='reports'),
+    path('reports/pdf/',            reports_views.report_pdf, name='report_pdf'),
     path('pricelist/', views.pricelist_view, name='pricelist'),
     path('pricelist/create/', views.pricelist_create, name='pricelist_create'),
     path('pricelist/<int:pk>/delete/', views.pricelist_delete, name='pricelist_delete'),

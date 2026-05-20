@@ -29,6 +29,21 @@ class User(AbstractUser):
     def is_customer(self):
         return self.role == self.Role.CUSTOMER
 
+    @property
+    def worker_rating(self):
+        """Ishchi o'rtacha reytingi (mijoz baholaridan)"""
+        from django.db.models import Avg, Count
+        from core.models import Review
+        agg = Review.objects.filter(
+            order__worker=self
+        ).aggregate(avg=Avg('rating'), cnt=Count('id'))
+        avg = agg['avg'] or 0
+        return {
+            'avg':   round(avg, 1),
+            'count': agg['cnt'],
+            'stars': int(round(avg)),
+        }
+
     def __str__(self):
         return self.email or self.username
 

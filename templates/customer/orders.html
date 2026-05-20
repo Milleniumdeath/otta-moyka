@@ -100,13 +100,27 @@
     {% endif %}
     <!-- ✅ YANGI tugadi -->
 
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-size:13px;color:var(--soft);">
             <i class="fa-solid fa-user-gear fa-xs"></i> {{ ad.worker.get_full_name }}
         </span>
         <span style="font-size:18px;font-weight:800;color:var(--cyan);">
             {{ ad.price|floatformat:0 }} so'm
         </span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+        {% if ad.worker_reviews %}
+        <span style="color:var(--amber);font-size:13px;letter-spacing:1px;">
+            {% for i in "12345" %}{% if forloop.counter <= ad.worker_avg %}<i class="fa-solid fa-star"></i>{% else %}<i class="fa-regular fa-star"></i>{% endif %}{% endfor %}
+        </span>
+        <span style="font-size:13px;font-weight:700;color:var(--amber);">{{ ad.worker_avg|floatformat:1 }}</span>
+        <span style="font-size:12px;color:var(--muted);">({{ ad.worker_reviews }} ta baho)</span>
+        {% else %}
+        <span style="font-size:12px;color:var(--muted);">
+            <i class="fa-regular fa-star"></i> Hali baholanmagan
+        </span>
+        {% endif %}
     </div>
 
     {% if cars %}

@@ -14,6 +14,9 @@
 <a href="{% url 'owner:finance' %}" class="nav-item {% if 'finance' in request.resolver_match.url_name or 'expense' in request.resolver_match.url_name or 'income' in request.resolver_match.url_name %}active{% endif %}">
     <i class="fa-solid fa-wallet"></i> Kirim & Chiqim
 </a>
+<a href="{% url 'owner:reports' %}" class="nav-item {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="fa-solid fa-chart-pie"></i> Statistika & Hisobot
+</a>
 <a href="{% url 'owner:cameras' %}" class="nav-item {% if request.resolver_match.url_name == 'cameras' %}active{% endif %}">
     <i class="fa-solid fa-video"></i> Kameralar
 </a>

@@ -122,13 +122,19 @@ MEDIA_URL    = '/media/'
 MEDIA_ROOT   = BASE_DIR / 'media'
 
 # ── EMAIL ──
-EMAIL_BACKEND       = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST          = 'smtp.gmail.com'
-EMAIL_PORT          = 587
-EMAIL_USE_TLS       = True
+# PythonAnywhere bepul rejasi tashqi SMTP'ni bloklaydi. SMTP kaliti berilmagan
+# bo'lsa, xat yuborish o'rniga konsolga chiqaramiz — saytda allauth signal'lari
+# sinmaydi.
 EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+if EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST    = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT    = int(os.environ.get('EMAIL_PORT', '587'))
+    EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL  = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@otta.local')
 
 # ── AUTH ──
 AUTHENTICATION_BACKENDS = [
@@ -177,6 +183,10 @@ if not DEBUG:
 # ── LOYIHA SOZLAMALARI ──
 LOYALTY_TOKENS_PER_ORDER = 10
 
+# ── AI YORDAMCHI (Google Gemini) ──
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+GEMINI_MODEL   = os.environ.get('GEMINI_MODEL', 'gemini-2.0-flash')
+
 LANGUAGE_CODE = 'uz'
 TIME_ZONE     = 'Asia/Tashkent'
 USE_I18N      = True
@@ -186,3 +196,6 @@ SOCIALACCOUNT_ADAPTER                        = 'accounts.adapters.OttaSocialAdap
 SOCIALACCOUNT_EMAIL_AUTHENTICATION           = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 SOCIALACCOUNT_LOGIN_ON_GET = False
+
+OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY', '')
+WEATHER_CITY = os.environ.get('WEATHER_CITY', 'Oltiariq')

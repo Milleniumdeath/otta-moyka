@@ -122,7 +122,11 @@ def orders(request):
         selected_car = cars.first()
 
     # Mashina turiga qarab e'lonlarni filtrlaymiz
-    ads = ServiceAd.objects.filter(is_active=True).select_related('worker')
+    from django.db.models import Avg, Count, F
+    ads = ServiceAd.objects.filter(is_active=True).select_related('worker').annotate(
+        worker_avg=Avg('worker__worker_orders__review__rating'),
+        worker_reviews=Count('worker__worker_orders__review', distinct=True),
+    ).order_by(F('worker_avg').desc(nulls_last=True), '-created_at')
 
     if selected_car:
         if selected_car.car_type == 'heavy':

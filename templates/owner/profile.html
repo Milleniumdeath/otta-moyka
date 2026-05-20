@@ -1,5 +1,5 @@
 {% extends 'base/panel_base.html' %}{% block title %}Profil{% endblock %}{% block page_title %}Profil{% endblock %}
-{% block sidebar_nav %}<a href="{% url 'owner:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a><a href="{% url 'owner:workers' %}" class="nav-item"><i class="fa-solid fa-users-gear"></i> Ishchilar</a><a href="{% url 'owner:customers' %}" class="nav-item"><i class="fa-solid fa-users"></i> Mijozlar</a><a href="{% url 'owner:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a><a href="{% url 'owner:cameras' %}" class="nav-item"><i class="fa-solid fa-video"></i> Kameralar</a><div class="nav-section">Sozlamalar</div><a href="{% url 'owner:profile' %}" class="nav-item active"><i class="fa-solid fa-user-gear"></i> Profil</a>{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
 {% block content %}
 <div class="profile-card">
     <div class="form-card-title"><i class="fa-solid fa-user-pen"></i> Profil Tahrirlash</div>

@@ -144,6 +144,7 @@ def dashboard(request):
         'monthly_earnings':  monthly_earnings,
         'pending_orders':    pending_orders[:5],
         'week_data':         week_data,
+        'rating':            request.user.worker_rating,
     })
 
 @worker_required

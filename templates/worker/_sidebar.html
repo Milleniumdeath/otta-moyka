@@ -1,0 +1,28 @@
+{% with url_name=request.resolver_match.url_name %}
+<a href="{% url 'worker:dashboard' %}" class="nav-item {% if url_name == 'dashboard' %}active{% endif %}">
+    <i class="fa-solid fa-chart-line"></i> Dashboard
+</a>
+<a href="{% url 'worker:my_ads' %}" class="nav-item {% if url_name == 'my_ads' or url_name == 'create_ad' or url_name == 'edit_ad' or url_name == 'delete_ad' %}active{% endif %}">
+    <i class="fa-solid fa-bullhorn"></i> E'lonlarim
+</a>
+<a href="{% url 'worker:orders' %}" class="nav-item {% if url_name == 'orders' or url_name == 'accept_order' or url_name == 'reject_order' or url_name == 'complete_order' %}active{% endif %}">
+    <i class="fa-solid fa-clipboard-list"></i> Buyurtmalar
+    {% if pending_count %}<span class="nav-badge">{{ pending_count }}</span>{% endif %}
+</a>
+<a href="{% url 'worker:order_history' %}" class="nav-item {% if url_name == 'order_history' %}active{% endif %}">
+    <i class="fa-solid fa-clock-rotate-left"></i> Tarix
+</a>
+<a href="{% url 'worker:bonuses' %}" class="nav-item {% if url_name == 'bonuses' or url_name == 'claim_bonus' %}active{% endif %}">
+    <i class="fa-solid fa-gift"></i> Bonuslar
+</a>
+<a href="{% url 'worker:schedule_list' %}" class="nav-item {% if url_name == 'schedule_list' or url_name == 'schedule_create' or url_name == 'schedule_toggle' %}active{% endif %}">
+    <i class="fa-solid fa-calendar-alt"></i> Ish Jadvalim
+</a>
+<a href="{% url 'worker:scheduled_orders' %}" class="nav-item {% if url_name == 'scheduled_orders' %}active{% endif %}">
+    <i class="fa-solid fa-calendar-check"></i> Rejalashtirilgan
+</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'worker:profile' %}" class="nav-item {% if url_name == 'profile' %}active{% endif %}">
+    <i class="fa-solid fa-user-gear"></i> Profil
+</a>
+{% endwith %}
