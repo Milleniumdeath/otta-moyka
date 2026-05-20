@@ -7,8 +7,10 @@ django-allauth[socialaccount]==65.16.0
 
 # DB + sozlama
 dj-database-url==3.1.2
-psycopg2-binary==2.9.11
 python-dotenv==1.2.2
+# PostgreSQL kerak bo'lsa keyinchalik qo'shing (PA bepulda Postgres yo'q,
+# SQLite/MySQL ishlatiladi — bu paket diskning ~20 MB joyini tejaydi):
+# psycopg2-binary==2.9.11
 
 # Static + xizmat
 whitenoise==6.12.0
