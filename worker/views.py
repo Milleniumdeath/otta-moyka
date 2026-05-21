@@ -213,6 +213,7 @@ def accept_order(request, pk):
         order = get_object_or_404(Order, pk=pk, worker=request.user)
         if order.status == Order.Status.PENDING:
             order.status = Order.Status.ACCEPTED
+            order.accepted_at = timezone.now()
             order.save()
             # E'lon `is_active` ni o'zgartirmaymiz — ishchi band/bo'sh ekani
             # `worker_is_busy` annotation (Exists subquery) orqali aniqlanadi.
@@ -236,6 +237,17 @@ def complete_order(request, pk):
     if request.method == 'POST':
         order = get_object_or_404(Order, pk=pk, worker=request.user)
         if order.status == Order.Status.ACCEPTED:
+            # ✅ Kamida MIN_WORK_MINUTES daqiqa o'tgan bo'lishi shart
+            if not order.can_be_completed():
+                left = order.minutes_left_to_complete()
+                messages.warning(
+                    request,
+                    f"Buyurtmani yakunlash uchun qabul qilingandan beri kamida "
+                    f"{order.MIN_WORK_MINUTES} daqiqa o'tishi kerak. "
+                    f"Yana ~{left} daqiqa kuting."
+                )
+                return redirect('worker:orders')
+
             order.status = Order.Status.COMPLETED
             order.completed_at = timezone.now()
             order.save()

@@ -64,7 +64,14 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    accepted_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name=_('Qabul qilingan vaqt')
+    )
     completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Buyurtmani yakunlash uchun qabul qilingandan beri o'tishi shart bo'lgan vaqt
+    MIN_WORK_MINUTES = 20
 
     class Meta:
         verbose_name = _('Buyurtma')
@@ -73,6 +80,30 @@ class Order(models.Model):
 
     def __str__(self):
         return f"#{self.pk} | {self.customer} → {self.worker} | {self.get_status_display()}"
+
+    def minutes_since_accepted(self):
+        """Buyurtma qabul qilinganidan beri necha daqiqa o'tdi.
+
+        accepted_at bo'lmasa (eski buyurtmalar) updated_at ga tayanadi.
+        """
+        from django.utils import timezone
+        ref = self.accepted_at or self.updated_at
+        if not ref:
+            return None
+        return (timezone.now() - ref).total_seconds() / 60
+
+    def can_be_completed(self):
+        """Yakunlash mumkinmi — kamida MIN_WORK_MINUTES daqiqa o'tganmi."""
+        m = self.minutes_since_accepted()
+        return m is not None and m >= self.MIN_WORK_MINUTES
+
+    def minutes_left_to_complete(self):
+        """Yakunlashga necha daqiqa qolgani (yuqoriga yaxlitlangan)."""
+        import math
+        m = self.minutes_since_accepted()
+        if m is None:
+            return 0
+        return max(0, math.ceil(self.MIN_WORK_MINUTES - m))
 
     def is_scheduled(self):
         return self.scheduled_time is not None
