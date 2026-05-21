@@ -176,6 +176,10 @@ def _gather_stats():
     else:
         growth = 100.0 if cur_month_rev else 0.0
 
+    # ── Oylik tushish (daromad kamaygan bo'lsa) ──
+    decline      = round(abs(growth), 1) if growth < 0 else 0.0
+    decline_amount = max(prev_month_rev - cur_month_rev, 0)
+
     # ── Kumulyativ daromad (oxirgi 6 oy yig'indisi) ──
     cumulative = []
     running = 0
@@ -194,6 +198,8 @@ def _gather_stats():
         'cur_month_rev':  cur_month_rev,
         'prev_month_rev': prev_month_rev,
         'growth':         growth,
+        'decline':        decline,
+        'decline_amount': decline_amount,
         'day_labels':     day_labels,
         'day_revenue':    day_revenue,
         'top_workers':    top_workers,
@@ -281,6 +287,7 @@ def report_pdf(request):
         ['Joriy oy daromadi', fmt(stats['cur_month_rev']) + " so'm"],
         ['O\'tgan oy daromadi', fmt(stats['prev_month_rev']) + " so'm"],
         ['Oylik o\'sish', f"{stats['growth']}%"],
+        ['Oylik tushish', f"{stats['decline']}%"],
     ]
     if stats['top_service']:
         summary_data.append(

@@ -69,6 +69,20 @@
         <div class="stat-value {% if growth >= 0 %}green{% else %}red{% endif %}">{{ growth }}%</div>
         <div class="stat-sub">o'tgan oyga nisbatan</div>
     </div>
+    <div class="stat-card">
+        <div class="stat-icon {% if decline > 0 %}red{% else %}green{% endif %}">
+            <i class="fa-solid {% if decline > 0 %}fa-arrow-trend-down{% else %}fa-equals{% endif %}"></i>
+        </div>
+        <div class="stat-label">Oylik tushish</div>
+        <div class="stat-value {% if decline > 0 %}red{% else %}green{% endif %}">{{ decline }}%</div>
+        <div class="stat-sub">
+            {% if decline > 0 %}
+                {{ decline_amount }} so'm kamaydi
+            {% else %}
+                tushish yo'q
+            {% endif %}
+        </div>
+    </div>
 </div>
 
 {% if total_orders == 0 %}
