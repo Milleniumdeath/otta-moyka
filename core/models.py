@@ -70,8 +70,10 @@ class Order(models.Model):
     )
     completed_at = models.DateTimeField(null=True, blank=True)
 
-    # Buyurtmani yakunlash uchun qabul qilingandan beri o'tishi shart bo'lgan vaqt
-    MIN_WORK_MINUTES = 20
+    # Buyurtmani yakunlash uchun qabul qilingandan beri o'tishi shart bo'lgan vaqt.
+    # Yengil mashina — 20 daqiqa, yuk mashina — 50 daqiqa.
+    LIGHT_WORK_MINUTES = 20
+    HEAVY_WORK_MINUTES = 50
 
     class Meta:
         verbose_name = _('Buyurtma')
@@ -92,10 +94,22 @@ class Order(models.Model):
             return None
         return (timezone.now() - ref).total_seconds() / 60
 
+    def is_heavy_wash(self):
+        """Buyurtma yuk mashina yuvishimi."""
+        if self.service_ad and getattr(self.service_ad, 'service_type', '') == 'heavy':
+            return True
+        if self.car and getattr(self.car, 'car_type', '') == 'heavy':
+            return True
+        return False
+
+    def required_work_minutes(self):
+        """Yakunlash uchun zarur minimal daqiqa — mashina turiga bog'liq."""
+        return self.HEAVY_WORK_MINUTES if self.is_heavy_wash() else self.LIGHT_WORK_MINUTES
+
     def can_be_completed(self):
-        """Yakunlash mumkinmi — kamida MIN_WORK_MINUTES daqiqa o'tganmi."""
+        """Yakunlash mumkinmi — zarur daqiqa o'tganmi (mashina turiga qarab)."""
         m = self.minutes_since_accepted()
-        return m is not None and m >= self.MIN_WORK_MINUTES
+        return m is not None and m >= self.required_work_minutes()
 
     def minutes_left_to_complete(self):
         """Yakunlashga necha daqiqa qolgani (yuqoriga yaxlitlangan)."""
@@ -103,7 +117,7 @@ class Order(models.Model):
         m = self.minutes_since_accepted()
         if m is None:
             return 0
-        return max(0, math.ceil(self.MIN_WORK_MINUTES - m))
+        return max(0, math.ceil(self.required_work_minutes() - m))
 
     def is_scheduled(self):
         return self.scheduled_time is not None

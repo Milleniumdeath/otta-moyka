@@ -19,7 +19,7 @@
               {% if o.can_be_completed %}
               <form method="post" action="{% url 'worker:complete_order' o.pk %}" onsubmit="return confirmComplete(this)">{% csrf_token %}<button class="btn btn-primary btn-sm"><i class="fa-solid fa-flag-checkered"></i> Yakunlash</button></form>
               {% else %}
-              <button class="btn btn-sm btn-wait" disabled title="Buyurtma qabul qilinganidan beri kamida 20 daqiqa o'tishi kerak"><i class="fa-solid fa-clock"></i> Yana {{ o.minutes_left_to_complete }} daq</button>
+              <button class="btn btn-sm btn-wait" disabled title="Yakunlash uchun qabul qilinganidan beri kamida {{ o.required_work_minutes }} daqiqa o'tishi kerak ({% if o.is_heavy_wash %}yuk mashina{% else %}yengil mashina{% endif %})"><i class="fa-solid fa-clock"></i> Yana {{ o.minutes_left_to_complete }} daq</button>
               {% endif %}
             {% endif %}
         </td>

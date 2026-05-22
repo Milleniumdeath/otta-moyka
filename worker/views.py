@@ -237,13 +237,15 @@ def complete_order(request, pk):
     if request.method == 'POST':
         order = get_object_or_404(Order, pk=pk, worker=request.user)
         if order.status == Order.Status.ACCEPTED:
-            # ✅ Kamida MIN_WORK_MINUTES daqiqa o'tgan bo'lishi shart
+            # ✅ Mashina turiga mos minimal vaqt o'tgan bo'lishi shart
             if not order.can_be_completed():
                 left = order.minutes_left_to_complete()
+                need = order.required_work_minutes()
+                tur  = "yuk mashina" if order.is_heavy_wash() else "yengil mashina"
                 messages.warning(
                     request,
                     f"Buyurtmani yakunlash uchun qabul qilingandan beri kamida "
-                    f"{order.MIN_WORK_MINUTES} daqiqa o'tishi kerak. "
+                    f"{need} daqiqa o'tishi kerak ({tur}). "
                     f"Yana ~{left} daqiqa kuting."
                 )
                 return redirect('worker:orders')
