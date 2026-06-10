@@ -424,17 +424,28 @@ CATEGORY_LABELS = {
 def _parse_lab_response(text: str):
     """AI javobidan JSON'ni ajratib oladi (markdown bloklarda yashirilgan bo'lsa ham)."""
     import re
-    text = text.strip()
-    # ```json ... ``` blokini olib tashlash
-    m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    text = (text or '').strip()
+    if not text:
+        raise ValueError("empty text")
+
+    # 1) ```json ... ``` markdown blokini olib tashlash
+    m = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text)
     if m:
         text = m.group(1)
-    # Boshlanmasdan ortiqcha matn bo'lsa, birinchi { dan boshlaymiz
-    start = text.find('{')
-    end = text.rfind('}')
-    if start >= 0 and end > start:
-        text = text[start:end + 1]
-    return json.loads(text)
+    else:
+        # 2) Birinchi { dan oxirgi } gacha ajratib olamiz
+        start = text.find('{')
+        end = text.rfind('}')
+        if start >= 0 and end > start:
+            text = text[start:end + 1]
+
+    # Ba'zan AI trailing comma qo'yadi — to'g'rilashga harakat qilamiz
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # Trailing comma'ni olib tashlash
+        cleaned = re.sub(r",(\s*[}\]])", r"\1", text)
+        return json.loads(cleaned)
 
 
 @login_required
@@ -486,12 +497,19 @@ def lab_generate(request):
         'contents': [{'role': 'user', 'parts': [{'text': user_prompt}]}],
         'generationConfig': {
             'temperature': 0.5,
-            'maxOutputTokens': 1500,
-            'response_mime_type': 'application/json',
+            'maxOutputTokens': 2048,
+            'responseMimeType': 'application/json',
         },
+        'safetySettings': [
+            {'category': 'HARM_CATEGORY_HARASSMENT',        'threshold': 'BLOCK_ONLY_HIGH'},
+            {'category': 'HARM_CATEGORY_HATE_SPEECH',       'threshold': 'BLOCK_ONLY_HIGH'},
+            {'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'threshold': 'BLOCK_ONLY_HIGH'},
+            {'category': 'HARM_CATEGORY_DANGEROUS_CONTENT', 'threshold': 'BLOCK_ONLY_HIGH'},
+        ],
     }
 
     last_status = None
+    last_detail = ''
     used_model = ''
     for model in _candidate_models():
         url = (
@@ -504,28 +522,63 @@ def lab_generate(request):
                     url,
                     params={'key': settings.GEMINI_API_KEY},
                     json=request_body,
-                    timeout=40,
+                    timeout=60,
                 )
-            except requests.RequestException:
+            except requests.RequestException as e:
                 last_status = 'conn'
+                last_detail = str(e)[:200]
                 break
 
             if resp.status_code == 200:
                 data = resp.json()
+
+                # Safety blockini tekshirish
+                prompt_feedback = data.get('promptFeedback') or {}
+                if prompt_feedback.get('blockReason'):
+                    return JsonResponse({
+                        'error': "AI xavfsizlik filtri so'rovni bloklab qo'ydi. "
+                                 "Maqsadni boshqacha so'zlar bilan ifodalang.",
+                    }, status=502)
+
+                candidates = data.get('candidates') or []
+                if not candidates:
+                    last_status = 'empty'
+                    last_detail = 'no candidates'
+                    break
+
+                finish_reason = candidates[0].get('finishReason', '')
+                if finish_reason == 'SAFETY':
+                    return JsonResponse({
+                        'error': "AI xavfsizlik filtri tomonidan bloklandi. "
+                                 "Boshqa so'zlar bilan urinib ko'ring.",
+                    }, status=502)
+
                 try:
-                    raw_text = data['candidates'][0]['content']['parts'][0]['text']
+                    raw_text = candidates[0]['content']['parts'][0]['text']
                 except (KeyError, IndexError, TypeError):
-                    return JsonResponse(
-                        {'error': "AI javob bera olmadi. Maqsadni boshqacha izohlang."},
-                        status=502,
-                    )
+                    last_status = 'empty'
+                    last_detail = f'no text, finish={finish_reason}'
+                    break
+
+                if not raw_text or not raw_text.strip():
+                    last_status = 'empty'
+                    last_detail = f'empty text, finish={finish_reason}'
+                    break
+
                 try:
                     parsed = _parse_lab_response(raw_text)
                 except (json.JSONDecodeError, ValueError):
-                    return JsonResponse(
-                        {'error': "AI tushunarli formatda javob bermadi. Qaytadan urinib ko'ring."},
-                        status=502,
-                    )
+                    # Bir marta keyingi modelga o'tib ko'ramiz
+                    last_status = 'parse'
+                    last_detail = raw_text[:200]
+                    break
+
+                # Minimal struktura tekshiruvi
+                if not isinstance(parsed, dict) or not parsed.get('ingredients'):
+                    last_status = 'parse'
+                    last_detail = 'no ingredients in parsed'
+                    break
+
                 used_model = model
                 return JsonResponse({
                     'recipe': parsed,
@@ -533,9 +586,16 @@ def lab_generate(request):
                     'ai_model': used_model,
                 })
 
+            # 200 emas
             last_status = resp.status_code
+            try:
+                err_data = resp.json()
+                last_detail = (err_data.get('error') or {}).get('message', '')[:200]
+            except Exception:
+                last_detail = resp.text[:200] if resp.text else ''
+
             if resp.status_code == 503 and attempt == 0:
-                time.sleep(1.2)
+                time.sleep(1.5)
                 continue
             break
 
@@ -544,7 +604,14 @@ def lab_generate(request):
     elif last_status == 503:
         msg = "AI xizmati hozir juda band. Iltimos, biroz kutib qayta urinib ko'ring."
     elif last_status == 'conn':
-        msg = "AI xizmatiga ulanib bo'lmadi. Internet aloqasini tekshiring."
+        msg = f"AI xizmatiga ulanib bo'lmadi. Internet aloqasini tekshiring. ({last_detail})"
+    elif last_status == 'parse':
+        msg = "AI tushunarli formatda javob bermadi. Qaytadan urinib ko'ring yoki maqsadni boshqacha yozing."
+    elif last_status == 'empty':
+        msg = "AI bo'sh javob qaytardi. Maqsadni batafsilroq yozib qayta urinib ko'ring."
+    elif last_status == 400:
+        reason = last_detail or "sabab noma'lum"
+        msg = f"So'rov noto'g'ri tuzilgan: {reason}"
     else:
-        msg = "AI xizmatida xatolik yuz berdi. Keyinroq urinib ko'ring."
+        msg = f"AI xizmatida xatolik yuz berdi. Keyinroq urinib ko'ring. ({last_status}: {last_detail})"
     return JsonResponse({'error': msg}, status=502)
