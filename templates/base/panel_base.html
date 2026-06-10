@@ -2,7 +2,14 @@
 <html lang="uz" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#050a0f" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#eef4fb" media="(prefers-color-scheme: light)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="OTTA Moyka">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
     <title>{% block title %}OTTA Moyka{% endblock %}</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -67,8 +74,13 @@
             background:var(--bg);
             color:var(--text);
             display:flex; min-height:100vh;
+            min-height:100dvh;
             transition:background var(--tr), color var(--tr);
             overflow-x:hidden;
+            overscroll-behavior-y:contain;
+            -webkit-tap-highlight-color:transparent;
+            -webkit-text-size-adjust:100%;
+            text-size-adjust:100%;
         }
 
         /* ── ANIMATED BG ── */
@@ -424,15 +436,139 @@
         .overlay.show { display:block; }
         /* ── MOBIL PASTKI MENYU (ilova uslubi) ── */
         .bottom-nav { display:none; }
-        @media(max-width:900px){
-            .sidebar { transform:translateX(-100%); }
-            .sidebar.open { transform:translateX(0); }
-            .main { margin-left:0; }
-            .menu-btn { display:none; }
-            .content { padding:20px 16px; padding-bottom:84px; }
-            .topbar { padding:0 16px; }
-            .stat-grid { grid-template-columns:repeat(2,1fr); gap:12px; }
 
+        /* ════════ MOBIL ILOVA REJIMI ════════ */
+        @media(max-width:900px){
+            /* SIDEBAR — drawer */
+            .sidebar {
+                width:min(82vw, 320px);
+                transform:translateX(-100%);
+                box-shadow:0 0 40px rgba(0,0,0,0.55);
+                padding-top:env(safe-area-inset-top);
+                padding-bottom:env(safe-area-inset-bottom);
+            }
+            .sidebar.open { transform:translateX(0); }
+
+            /* MAIN */
+            .main { margin-left:0; min-height:100vh; min-height:100dvh; }
+            .menu-btn {
+                display:flex; align-items:center; justify-content:center;
+                width:40px; height:40px; border-radius:10px;
+                background:var(--glass2); border:1px solid var(--border);
+                font-size:17px;
+            }
+
+            /* TOPBAR — sticky, safe-area awareness */
+            .topbar {
+                padding:0 12px; height:56px;
+                padding-top:env(safe-area-inset-top);
+                height:calc(56px + env(safe-area-inset-top));
+                gap:8px;
+            }
+            .topbar-left { gap:10px; min-width:0; flex:1; }
+            .page-title {
+                font-size:17px; letter-spacing:1.2px;
+                white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+            }
+            .topbar-right { gap:6px; }
+            .tb-clock { display:none; }
+            .tb-theme, .notif-btn { width:38px; height:38px; }
+
+            /* CONTENT */
+            .content {
+                padding:14px 12px calc(94px + env(safe-area-inset-bottom));
+            }
+
+            /* ALERTS */
+            .alert { padding:10px 12px; font-size:13px; }
+
+            /* STAT GRID */
+            .stat-grid { grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:18px; }
+            .stat-card { padding:14px; border-radius:14px; }
+            .stat-icon { width:36px; height:36px; margin-bottom:10px; font-size:15px; border-radius:10px; }
+            .stat-value { font-size:26px; }
+            .stat-label { font-size:10px; }
+
+            /* TABLE — horizontal scroll wrapper */
+            .table-card { overflow:hidden; border-radius:14px; }
+            .table-head { padding:14px 16px; }
+            .table-head-title { font-size:14px; }
+            .table-card > table {
+                display:block; overflow-x:auto; overflow-y:hidden;
+                -webkit-overflow-scrolling:touch; max-width:100%;
+                white-space:nowrap;
+                scrollbar-width:thin;
+            }
+            .table-card > table::-webkit-scrollbar { height:6px; }
+            .table-card > table::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+            th, td { padding:10px 12px; font-size:12px; }
+            th { font-size:10px; padding:9px 12px; }
+            td .badge { font-size:11px; padding:3px 8px; }
+            td .btn { padding:6px 10px; font-size:11px; min-height:32px; }
+            .user-cell { gap:8px; }
+            .u-ava { width:30px; height:30px; font-size:12px; }
+
+            /* FORMS — touch-friendly */
+            .form-card { padding:18px; border-radius:14px; }
+            .form-card-title { font-size:14px; margin-bottom:18px; }
+            .form-row { flex-direction:column; gap:0; }
+            .form-row .form-group { margin-bottom:14px; }
+            .form-control {
+                padding:12px 14px;
+                font-size:16px; /* iOS auto-zoom oldini oladi */
+                border-radius:10px;
+            }
+            .form-label { font-size:10px; }
+
+            /* MODAL — to'liq ekran feel */
+            .modal-overlay { padding:12px 0; }
+            .modal-box {
+                padding:22px 18px; border-radius:18px;
+                width:calc(100% - 24px);
+                max-width:none;
+                max-height:calc(100vh - 24px);
+                max-height:calc(100dvh - 24px);
+            }
+            .modal-title { font-size:20px; }
+            .modal-text { font-size:13px; margin-bottom:20px; }
+            .modal-btns { flex-direction:column; gap:8px; }
+            .modal-btns .btn, .modal-btns form, .modal-btns form .btn { width:100%; justify-content:center; }
+
+            /* BUTTONS — minimal 38px touch */
+            .btn { padding:10px 14px; min-height:40px; font-size:13px; }
+            .btn-sm { padding:8px 12px; min-height:34px; font-size:12px; }
+
+            /* PROFILE */
+            .profile-card { padding:20px; border-radius:16px; }
+            .profile-avatar-wrap { gap:14px; margin-bottom:20px; flex-wrap:wrap; }
+            .profile-avatar { width:64px; height:64px; font-size:24px; }
+
+            /* GRID'LAR — 2 ustun */
+            .bonus-grid, .car-grid, .cam-grid {
+                grid-template-columns:repeat(2,1fr); gap:10px;
+            }
+            .bonus-img, .car-img { height:90px; font-size:34px; }
+            .bonus-body, .car-body { padding:12px; }
+            .bonus-name, .car-name { font-size:13px; }
+            .bonus-desc { font-size:11px; -webkit-line-clamp:2; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+
+            /* NOTIFICATION PANEL — full width on mobile */
+            .notif-panel {
+                position:fixed;
+                top:calc(56px + env(safe-area-inset-top) + 4px);
+                left:8px; right:8px;
+                width:auto;
+                max-height:calc(100vh - 70px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+            }
+
+            /* TOAST */
+            #toastContainer {
+                bottom:calc(80px + env(safe-area-inset-bottom));
+                right:8px; left:8px;
+            }
+            .toast { min-width:0; max-width:none; }
+
+            /* BOTTOM NAV */
             .bottom-nav {
                 display:flex;
                 position:fixed; left:0; right:0; bottom:0; z-index:1400;
@@ -440,15 +576,15 @@
                 backdrop-filter:blur(24px) saturate(1.5);
                 -webkit-backdrop-filter:blur(24px) saturate(1.5);
                 border-top:1px solid var(--border);
-                padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+                padding:6px 4px calc(6px + env(safe-area-inset-bottom));
                 overflow-x:auto; overflow-y:hidden;
                 -webkit-overflow-scrolling:touch;
                 scrollbar-width:none;
             }
             .bottom-nav::-webkit-scrollbar { display:none; }
             .bn-item {
-                flex:1 0 auto; min-width:62px;
-                display:flex; flex-direction:column; align-items:center; gap:4px;
+                flex:1 0 auto; min-width:64px;
+                display:flex; flex-direction:column; align-items:center; gap:3px;
                 padding:6px 8px; border-radius:12px;
                 text-decoration:none; color:var(--soft);
                 font-size:10px; font-weight:600; text-align:center;
@@ -456,16 +592,16 @@
                 background:none; border:none; cursor:pointer;
                 font-family:'DM Sans',sans-serif;
             }
-            .bn-item i { font-size:19px; line-height:1; }
+            .bn-item i { font-size:18px; line-height:1; }
             .bn-item span {
-                max-width:64px; overflow:hidden; text-overflow:ellipsis;
+                max-width:66px; overflow:hidden; text-overflow:ellipsis;
                 white-space:nowrap; display:block;
             }
             .bn-item.active { color:var(--accent2); }
             .bn-item.active::before {
                 content:''; position:absolute; top:0; left:50%;
                 transform:translateX(-50%);
-                width:26px; height:3px; border-radius:0 0 3px 3px;
+                width:24px; height:3px; border-radius:0 0 3px 3px;
                 background:var(--accent2);
             }
             .bn-item:hover { color:var(--accent2); }
@@ -476,8 +612,33 @@
                 font-size:9px; font-weight:800;
                 display:flex; align-items:center; justify-content:center;
             }
-            /* AI tugmasi pastki menyu ustida turishi uchun */
-            .ai-fab { bottom:calc(80px + env(safe-area-inset-bottom)); }
+
+            /* AI FAB — bottom-nav ustida */
+            .ai-fab {
+                bottom:calc(80px + env(safe-area-inset-bottom));
+                right:14px; width:52px; height:52px; font-size:19px;
+            }
+
+            /* LIVE BANNER */
+            .live-banner {
+                left:12px !important; right:12px !important;
+                transform:none !important;
+                bottom:calc(86px + env(safe-area-inset-bottom)) !important;
+                width:auto !important;
+            }
+        }
+
+        /* ════ Juda kichik ekranlar (≤480px) ════ */
+        @media(max-width:480px){
+            .stat-grid { gap:8px; }
+            .stat-card { padding:12px; }
+            .stat-value { font-size:22px; }
+            .page-title { font-size:15px; letter-spacing:1px; }
+            th, td { padding:9px 10px; font-size:11px; }
+            th { font-size:9px; }
+            .bn-item { min-width:58px; font-size:9px; padding:6px 4px; }
+            .bn-item i { font-size:17px; }
+            .bn-item span { max-width:58px; }
         }
 
         /* ── AI YORDAMCHI ── */

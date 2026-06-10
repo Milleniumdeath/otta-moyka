@@ -522,6 +522,25 @@
     color: var(--cyan);
 }
 .method-lbl:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* ── Mobil moslashuv ── */
+@media (max-width: 600px) {
+    .car-tabs { gap: 8px; }
+    .car-tab { padding: 8px 12px; font-size: 12px; gap: 8px; flex: 1 1 calc(50% - 8px); min-width: 0; }
+    .car-tab-name { font-size: 12px; }
+    .car-tab-plate { font-size: 10px; }
+    .selected-info { font-size: 12px; padding: 9px 12px; }
+    .time-type-row { gap: 8px; }
+    .time-type-btn { padding: 10px 14px; font-size: 12px; flex: 1; justify-content: center; }
+    .time-type-opt { flex: 1; display: flex; }
+    .pay-section { padding: 12px; }
+    .pay-section-title { font-size: 12px; }
+    .pay-amount { font-size: 13px; }
+    .method-row { gap: 6px; }
+    .method-opt { flex: 1 1 calc(50% - 4px); }
+    .method-lbl { width: 100%; justify-content: center; padding: 9px 8px; font-size: 12px; }
+    .queue-info { font-size: 11px; padding: 7px 10px; }
+}
 </style>
 
 {% endblock %}
