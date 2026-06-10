@@ -143,6 +143,18 @@ def order_history(request):
     })
 
 
+@owner_required
+def receipt_detail(request, pk):
+    """Moyka egasi har qanday to'lov chekini ko'rishi mumkin."""
+    receipt = get_object_or_404(
+        Receipt.objects.select_related(
+            'customer', 'order', 'order__worker', 'order__car', 'order__service_ad'
+        ),
+        pk=pk,
+    )
+    return render(request, 'owner/receipt.html', {'receipt': receipt})
+
+
 # ─────────────────────────────────────────────────────────────
 # WORKERS
 # ─────────────────────────────────────────────────────────────

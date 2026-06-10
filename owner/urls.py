@@ -9,6 +9,7 @@ app_name = 'owner'
 urlpatterns = [
     path('dashboard/',              views.dashboard,        name='dashboard'),
     path('orders/history/',         views.order_history,    name='order_history'),
+    path('receipts/<int:pk>/',      views.receipt_detail,   name='receipt_detail'),
     path('workers/',                views.workers,          name='workers'),
     path('workers/approve/<int:pk>/', views.approve_worker, name='approve_worker'),
     path('workers/delete/<int:pk>/',  views.delete_worker,  name='delete_worker'),

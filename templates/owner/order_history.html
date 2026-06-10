@@ -32,6 +32,12 @@
 .paid-pill {
     background:rgba(0,232,122,0.12); color:#00e87a; border:1px solid rgba(0,232,122,0.3);
 }
+.paid-link {
+    text-decoration:none; cursor:pointer; transition:all 0.15s;
+}
+.paid-link:hover {
+    background:rgba(0,232,122,0.22); border-color:rgba(0,232,122,0.6); transform:translateY(-1px);
+}
 .unpaid-pill {
     background:rgba(255,77,106,0.10); color:#ff4d6a; border:1px solid rgba(255,77,106,0.28);
 }
@@ -121,9 +127,10 @@
                 </td>
                 <td>
                     {% if o.receipt %}
-                    <span class="paid-pill">
+                    <a href="{% url 'owner:receipt_detail' o.receipt.pk %}" class="paid-pill paid-link" title="Chekni ochish">
                         <i class="fa-solid fa-circle-check"></i> To'lov qilingan
-                    </span>
+                        <i class="fa-solid fa-up-right-from-square" style="font-size:9px;opacity:0.7;margin-left:2px;"></i>
+                    </a>
                     <div class="txn-id">
                         {{ o.receipt.get_method_display }}
                         {% if o.receipt.card_last4 %} · ****{{ o.receipt.card_last4 }}{% endif %}
