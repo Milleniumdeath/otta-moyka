@@ -1,0 +1,110 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Chek #{{ receipt.transaction_id }}{% endblock %}
+{% block page_title %}To'lov cheki{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'customer:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'customer:my_cars' %}" class="nav-item"><i class="fa-solid fa-truck-moving"></i> Mashinalarim</a>
+<a href="{% url 'customer:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
+<a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'customer:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'customer:receipts_list' %}" class="nav-item active"><i class="fa-solid fa-receipt"></i> Cheklarim</a>
+<a href="{% url 'customer:reminders_list' %}" class="nav-item"><i class="fa-solid fa-bell"></i> Eslatmalarim</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block content %}
+<style>
+.receipt-wrap { max-width:480px; margin:0 auto; }
+.receipt {
+    background:#fff; color:#1a1a1a; padding:34px 28px; border-radius:14px;
+    font-family:'Courier New','Consolas',monospace; position:relative;
+    box-shadow:0 12px 40px rgba(0,0,0,0.45);
+}
+.receipt::before, .receipt::after {
+    content:''; position:absolute; left:0; right:0; height:14px;
+    background-image:radial-gradient(circle, transparent 5px, #fff 6px);
+    background-size:18px 14px; background-repeat:repeat-x;
+}
+.receipt::before { top:-7px; }
+.receipt::after  { bottom:-7px; transform:rotate(180deg); }
+
+.r-brand { text-align:center; font-size:18px; font-weight:800; letter-spacing:3px; }
+.r-sub   { text-align:center; font-size:11px; color:#666; margin-bottom:14px; letter-spacing:1px; }
+.r-line  { border-top:1px dashed #999; margin:10px 0; }
+.r-row   { display:flex; justify-content:space-between; font-size:12px; margin:4px 0; }
+.r-row .l { color:#555; }
+.r-row .v { font-weight:700; }
+.r-total {
+    margin-top:14px; padding:10px 0; border-top:2px dashed #333; border-bottom:2px dashed #333;
+    display:flex; justify-content:space-between; font-size:16px; font-weight:800;
+}
+.r-paid {
+    text-align:center; margin-top:14px; font-size:14px; font-weight:800; letter-spacing:3px;
+    color:#0a8c3a; border:2px dashed #0a8c3a; padding:8px; border-radius:6px;
+}
+.r-txn { text-align:center; font-size:10px; color:#888; margin-top:14px; letter-spacing:1px; }
+.r-footer { text-align:center; font-size:10px; color:#999; margin-top:14px; }
+
+.r-actions {
+    display:flex; gap:10px; margin-top:18px; justify-content:center;
+}
+@media print {
+    body * { visibility:hidden; }
+    .receipt-wrap, .receipt-wrap * { visibility:visible; }
+    .receipt-wrap { position:absolute; top:0; left:0; right:0; }
+    .r-actions { display:none; }
+    .receipt { box-shadow:none; }
+}
+</style>
+
+<div class="receipt-wrap">
+    <div class="receipt">
+        <div class="r-brand">AVTOMOYKA</div>
+        <div class="r-sub">SOXTA TO'LOV CHEKI · DEMO</div>
+
+        <div class="r-line"></div>
+
+        <div class="r-row"><span class="l">Sana:</span><span class="v">{{ receipt.created_at|date:"d.m.Y H:i" }}</span></div>
+        <div class="r-row"><span class="l">Chek №:</span><span class="v">{{ receipt.transaction_id }}</span></div>
+        <div class="r-row"><span class="l">Buyurtma:</span><span class="v">#{{ receipt.order.pk }}</span></div>
+        <div class="r-row"><span class="l">Mijoz:</span><span class="v">{{ receipt.customer.get_full_name|default:receipt.customer }}</span></div>
+        <div class="r-row"><span class="l">Ishchi:</span><span class="v">{{ receipt.order.worker.get_full_name }}</span></div>
+
+        <div class="r-line"></div>
+
+        <div class="r-row"><span class="l">Xizmat:</span><span class="v">{{ receipt.order.service_ad.get_service_type_display }}</span></div>
+        <div class="r-row"><span class="l">Mashina:</span><span class="v">{{ receipt.order.car }}</span></div>
+
+        <div class="r-line"></div>
+
+        <div class="r-row"><span class="l">To'lov usuli:</span><span class="v">{{ receipt.get_method_display }}</span></div>
+        {% if receipt.card_last4 %}
+        <div class="r-row"><span class="l">Karta:</span><span class="v">**** **** **** {{ receipt.card_last4 }}</span></div>
+        {% endif %}
+        {% if receipt.holder_name %}
+        <div class="r-row"><span class="l">Karta egasi:</span><span class="v">{{ receipt.holder_name }}</span></div>
+        {% endif %}
+
+        <div class="r-total">
+            <span>JAMI:</span>
+            <span>{{ receipt.amount|floatformat:0 }} so'm</span>
+        </div>
+
+        <div class="r-paid">TO'LANDI</div>
+
+        <div class="r-txn">TXN ID: {{ receipt.transaction_id }}</div>
+        <div class="r-footer">Tashrifingiz uchun rahmat!</div>
+    </div>
+
+    <div class="r-actions">
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fa-solid fa-print"></i> Chop etish
+        </button>
+        <a href="{% url 'customer:receipts_list' %}" class="btn btn-ghost">
+            <i class="fa-solid fa-list"></i> Cheklarim
+        </a>
+    </div>
+</div>
+{% endblock %}

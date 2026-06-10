@@ -8,6 +8,8 @@
 <a href="{% url 'customer:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
 <a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
 <a href="{% url 'customer:bonuses' %}" class="nav-item active"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'customer:receipts_list' %}" class="nav-item"><i class="fa-solid fa-receipt"></i> Cheklarim</a>
+<a href="{% url 'customer:reminders_list' %}" class="nav-item"><i class="fa-solid fa-bell"></i> Eslatmalarim</a>
 <div class="nav-section">Sozlamalar</div>
 <a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
 {% endblock %}

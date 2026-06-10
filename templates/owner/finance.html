@@ -78,6 +78,96 @@
     padding:6px 16px; border-radius:20px; font-size:14px; font-weight:800;
 }
 .profit-pos { background:rgba(0,232,122,0.12); color:var(--green); border:1px solid rgba(0,232,122,0.2); }
+
+/* AI FORECAST CARD */
+.forecast-card {
+    background: linear-gradient(135deg, rgba(168,85,247,0.06) 0%, rgba(0,200,255,0.04) 100%);
+    border: 1px solid rgba(168,85,247,0.25);
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(16px);
+}
+.forecast-card::before {
+    content: ''; position: absolute; top: -60px; right: -60px;
+    width: 220px; height: 220px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(168,85,247,0.18), transparent 70%);
+    pointer-events: none;
+}
+.forecast-head {
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom: 14px; flex-wrap:wrap; gap:10px;
+}
+.forecast-title {
+    font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px;
+    color: #fff; letter-spacing: .3px;
+}
+.forecast-title i.fa-brain { color: #c084fc; }
+.ai-badge {
+    display:inline-flex; align-items:center; gap:5px;
+    background: rgba(168,85,247,0.14); color:#c084fc;
+    border:1px solid rgba(168,85,247,0.3);
+    padding: 3px 10px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+}
+.forecast-hint {
+    font-size: 13px; color: var(--muted); line-height: 1.6;
+}
+.forecast-hint strong { color: #c084fc; }
+
+.forecast-stats {
+    display:grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    margin: 16px 0 18px;
+}
+@media (max-width:980px) { .forecast-stats { grid-template-columns: repeat(2, 1fr); } }
+.f-stat {
+    background: rgba(0,0,0,0.18); border:1px solid var(--border);
+    border-radius: 11px; padding: 12px 14px; position: relative;
+}
+.f-stat-lbl {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px; font-weight: 700;
+}
+.f-stat-val {
+    font-family: 'Bebas Neue', sans-serif; font-size: 24px; line-height: 1.1;
+    color: #fff;
+}
+.f-stat-val.green { color: var(--green); }
+.f-stat-val.red   { color: var(--red); }
+.f-stat-val.cyan  { color: var(--cyan); }
+.trend-stat.up   { border-color: rgba(0,232,122,0.35); background: rgba(0,232,122,0.06); }
+.trend-stat.down { border-color: rgba(255,77,106,0.35); background: rgba(255,77,106,0.06); }
+.trend-stat.flat { border-color: rgba(245,158,11,0.30); background: rgba(245,158,11,0.05); }
+.trend-arrow {
+    position: absolute; top: 12px; right: 12px; font-size: 18px; opacity: 0.85;
+}
+.trend-stat.up   .f-stat-val { color: var(--green); }
+.trend-stat.down .f-stat-val { color: var(--red); }
+.trend-stat.flat .f-stat-val { color: #f59e0b; }
+
+.forecast-chart-wrap {
+    background: rgba(0,0,0,0.18); border:1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 16px;
+}
+.forecast-narrative {
+    background: rgba(168,85,247,0.07);
+    border: 1px solid rgba(168,85,247,0.22);
+    border-left: 3px solid #c084fc;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--text);
+    white-space: pre-wrap;
+}
+.forecast-error {
+    background: rgba(255,77,106,0.08); border:1px solid rgba(255,77,106,0.25);
+    border-radius: 10px; padding: 12px 16px; color: var(--red);
+    font-size: 13px; display:flex; align-items:center; gap:10px;
+}
+#forecastBtn:disabled { opacity: 0.6; cursor: wait; }
 .profit-neg { background:rgba(255,77,106,0.12); color:var(--red); border:1px solid rgba(255,77,106,0.2); }
 
 /* MINI INPUT GROUP */
@@ -102,6 +192,62 @@
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:13px;">
         <i class="fa-solid fa-calendar-range"></i>
         {{ start|date:"d.m.Y" }} — {{ end|date:"d.m.Y" }}
+    </div>
+</div>
+
+<!-- AI MOLIYAVIY BASHORAT -->
+<div class="forecast-card" id="forecastCard">
+    <div class="forecast-head">
+        <div class="forecast-title">
+            <i class="fa-solid fa-brain"></i>
+            AI Moliyaviy Bashorat
+            <span class="ai-badge"><i class="fa-solid fa-sparkles fa-xs"></i> Gemini</span>
+        </div>
+        <button class="btn btn-primary" id="forecastBtn" onclick="loadForecast()">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Bashorat olish
+        </button>
+    </div>
+
+    <div class="forecast-hint" id="forecastHint">
+        Keyingi 1 oylik kirim-chiqim va foyda o'sishi/tushishi haqida AI bashorati uchun
+        <strong>"Bashorat olish"</strong> tugmasini bosing. Tahlil oxirgi 6 oylik ma'lumot asosida tayyorlanadi.
+    </div>
+
+    <div class="forecast-result" id="forecastResult" style="display:none;">
+        <div class="forecast-stats">
+            <div class="f-stat">
+                <div class="f-stat-lbl">Bashorat oyi</div>
+                <div class="f-stat-val" id="fcNextLabel">—</div>
+            </div>
+            <div class="f-stat">
+                <div class="f-stat-lbl">Kutilayotgan kirim</div>
+                <div class="f-stat-val green" id="fcIncome">— so'm</div>
+            </div>
+            <div class="f-stat">
+                <div class="f-stat-lbl">Kutilayotgan chiqim</div>
+                <div class="f-stat-val red" id="fcExpense">— so'm</div>
+            </div>
+            <div class="f-stat">
+                <div class="f-stat-lbl">Bashorat foyda</div>
+                <div class="f-stat-val cyan" id="fcProfit">— so'm</div>
+            </div>
+            <div class="f-stat trend-stat" id="fcTrendBox">
+                <div class="f-stat-lbl">Foyda o'zgarishi</div>
+                <div class="f-stat-val" id="fcGrowth">— %</div>
+                <div class="trend-arrow" id="fcTrendArrow"></div>
+            </div>
+        </div>
+
+        <div class="forecast-chart-wrap">
+            <canvas id="forecastChart" height="80"></canvas>
+        </div>
+
+        <div class="forecast-narrative" id="fcNarrative">—</div>
+    </div>
+
+    <div class="forecast-error" id="forecastError" style="display:none;">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span id="fcErrText">Xatolik yuz berdi</span>
     </div>
 </div>
 
@@ -526,6 +672,135 @@ function showIncGroup(group, el) {
         const el2 = document.getElementById('inc-' + g);
         if (el2) el2.classList.toggle('show', g === group);
     });
+}
+
+// ── AI MOLIYAVIY BASHORAT ──
+let forecastChart = null;
+
+async function loadForecast() {
+    const btn = document.getElementById('forecastBtn');
+    const hint = document.getElementById('forecastHint');
+    const result = document.getElementById('forecastResult');
+    const errBox = document.getElementById('forecastError');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Tahlil qilinmoqda...';
+    errBox.style.display = 'none';
+
+    try {
+        const resp = await fetch("{% url 'owner:finance_forecast' %}", {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin',
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        renderForecast(data);
+        hint.style.display = 'none';
+        result.style.display = 'block';
+    } catch (e) {
+        errBox.style.display = 'flex';
+        document.getElementById('fcErrText').textContent =
+            'Bashoratni olishda xatolik: ' + e.message;
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Qayta tahlil qilish';
+    }
+}
+
+function fmt(n) { return Number(n).toLocaleString() + " so'm"; }
+
+function renderForecast(data) {
+    document.getElementById('fcNextLabel').textContent = data.next_label;
+    document.getElementById('fcIncome').textContent  = fmt(data.predicted.income);
+    document.getElementById('fcExpense').textContent = fmt(data.predicted.expense);
+    document.getElementById('fcProfit').textContent  = fmt(data.predicted.profit);
+
+    const growth = data.growth_pct;
+    const sign = growth > 0 ? '+' : '';
+    document.getElementById('fcGrowth').textContent = sign + growth.toFixed(1) + '%';
+
+    const trendBox = document.getElementById('fcTrendBox');
+    trendBox.classList.remove('up','down','flat');
+    trendBox.classList.add(data.trend);
+    const arrows = {
+        up:   '<i class="fa-solid fa-arrow-trend-up" style="color:var(--green);"></i>',
+        down: '<i class="fa-solid fa-arrow-trend-down" style="color:var(--red);"></i>',
+        flat: '<i class="fa-solid fa-arrows-left-right" style="color:#f59e0b;"></i>',
+    };
+    document.getElementById('fcTrendArrow').innerHTML = arrows[data.trend] || '';
+
+    document.getElementById('fcNarrative').textContent = data.narrative;
+
+    // Chart: tarix + bashorat
+    const labels = data.history.map(h => h.label).concat([data.next_label + ' (bashorat)']);
+    const incomes  = data.history.map(h => h.income).concat([data.predicted.income]);
+    const expenses = data.history.map(h => h.expense).concat([data.predicted.expense]);
+    const profits  = data.history.map(h => h.profit).concat([data.predicted.profit]);
+    const last = data.history.length;
+
+    if (forecastChart) forecastChart.destroy();
+    forecastChart = new Chart(
+        document.getElementById('forecastChart').getContext('2d'),
+        {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Kirim',
+                        data: incomes,
+                        borderColor: '#00e87a',
+                        backgroundColor: 'rgba(0,232,122,0.10)',
+                        tension: 0.35, borderWidth: 2,
+                        pointRadius: (ctx) => ctx.dataIndex === last ? 6 : 3,
+                        pointBackgroundColor: (ctx) => ctx.dataIndex === last ? '#c084fc' : '#00e87a',
+                        segment: { borderDash: (ctx) => ctx.p1DataIndex === last ? [6,4] : undefined },
+                    },
+                    {
+                        label: 'Chiqim',
+                        data: expenses,
+                        borderColor: '#ff4d6a',
+                        backgroundColor: 'rgba(255,77,106,0.08)',
+                        tension: 0.35, borderWidth: 2,
+                        pointRadius: (ctx) => ctx.dataIndex === last ? 6 : 3,
+                        pointBackgroundColor: (ctx) => ctx.dataIndex === last ? '#c084fc' : '#ff4d6a',
+                        segment: { borderDash: (ctx) => ctx.p1DataIndex === last ? [6,4] : undefined },
+                    },
+                    {
+                        label: 'Sof foyda',
+                        data: profits,
+                        borderColor: '#00c8ff',
+                        backgroundColor: 'rgba(0,200,255,0.10)',
+                        tension: 0.35, borderWidth: 2,
+                        pointRadius: (ctx) => ctx.dataIndex === last ? 6 : 3,
+                        pointBackgroundColor: (ctx) => ctx.dataIndex === last ? '#c084fc' : '#00c8ff',
+                        segment: { borderDash: (ctx) => ctx.p1DataIndex === last ? [6,4] : undefined },
+                    },
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#7aaabf', font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: c => c.dataset.label + ': ' + c.parsed.y.toLocaleString() + " so'm"
+                        }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#3d6070' }, grid: { color: 'rgba(255,255,255,0.04)' } },
+                    y: {
+                        ticks: {
+                            color: '#3d6070',
+                            callback: v => (v/1000).toFixed(0) + 'k'
+                        },
+                        grid: { color: 'rgba(255,255,255,0.04)' }
+                    }
+                }
+            }
+        }
+    );
 }
 </script>
 {% endblock %}

@@ -8,6 +8,8 @@
 <a href="{% url 'customer:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
 <a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
 <a href="{% url 'customer:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'customer:receipts_list' %}" class="nav-item"><i class="fa-solid fa-receipt"></i> Cheklarim</a>
+<a href="{% url 'customer:reminders_list' %}" class="nav-item"><i class="fa-solid fa-bell"></i> Eslatmalarim</a>
 <div class="nav-section">Sozlamalar</div>
 <a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
 {% endblock %}
@@ -141,6 +143,19 @@
         </div>
         <div style="text-align:right;flex-shrink:0;">
             <span class="badge badge-{{ o.status }}"><i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}</span>
+            {% if o.status == 'pending' %}
+                {% with pos=o.queue_position %}
+                {% if pos %}
+                <div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:3px 9px;font-size:11px;font-weight:700;border-radius:999px;background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.28);">
+                    <i class="fa-solid fa-people-line fa-xs"></i> Navbatda {{ pos }}-o'rin
+                </div>
+                {% endif %}
+                {% endwith %}
+            {% elif o.status == 'accepted' or o.status == 'in_progress' %}
+                <div style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;padding:3px 9px;font-size:11px;font-weight:700;border-radius:999px;background:rgba(0,232,122,0.12);color:#00e87a;border:1px solid rgba(0,232,122,0.28);">
+                    <i class="fa-solid fa-bolt fa-xs"></i> Xizmatda
+                </div>
+            {% endif %}
             <div style="font-size:11px;color:var(--muted);margin-top:4px;">{{ o.created_at|date:"d.m.Y H:i" }}</div>
         </div>
     </div>

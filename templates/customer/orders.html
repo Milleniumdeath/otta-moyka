@@ -8,6 +8,8 @@
 <a href="{% url 'customer:orders' %}" class="nav-item active"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
 <a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
 <a href="{% url 'customer:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'customer:receipts_list' %}" class="nav-item"><i class="fa-solid fa-receipt"></i> Cheklarim</a>
+<a href="{% url 'customer:reminders_list' %}" class="nav-item"><i class="fa-solid fa-bell"></i> Eslatmalarim</a>
 <div class="nav-section">Sozlamalar</div>
 <a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
 {% endblock %}
@@ -124,13 +126,28 @@
     </div>
 
     {% if ad.worker_is_busy %}
-    <button class="btn btn-busy" style="width:100%;" disabled
-            title="Ishchi boshqa buyurtma bilan band">
-        <i class="fa-solid fa-hourglass-half"></i> Ishchi hozir band
-    </button>
+        <div class="queue-info">
+            <i class="fa-solid fa-people-line"></i>
+            {% if ad.worker_queue_count %}
+                Navbatda: <strong>{{ ad.worker_queue_count }}</strong> kishi turibdi
+            {% else %}
+                Hozir band, navbat bo'sh
+            {% endif %}
+        </div>
+        {% if cars %}
+        <button class="btn btn-queue" style="width:100%;"
+                onclick="showOrder({{ ad.pk }}, '{{ ad.title }}', {{ ad.price }}, '{{ ad.worker.get_full_name }}', true, {{ ad.worker_queue_count|add:2 }})">
+            <i class="fa-solid fa-user-plus"></i>
+            Navbatga yozilish ({{ ad.worker_queue_count|add:2 }}-o'rin)
+        </button>
+        {% else %}
+        <button class="btn btn-ghost" style="width:100%;opacity:0.5;" disabled>
+            <i class="fa-solid fa-lock"></i> Avval mashina qo'shing
+        </button>
+        {% endif %}
     {% elif cars %}
     <button class="btn btn-primary" style="width:100%;"
-            onclick="showOrder({{ ad.pk }}, '{{ ad.title }}', {{ ad.price }}, '{{ ad.worker.get_full_name }}')">
+            onclick="showOrder({{ ad.pk }}, '{{ ad.title }}', {{ ad.price }}, '{{ ad.worker.get_full_name }}', false, 1)">
         <i class="fa-solid fa-clipboard-check"></i> Buyurtma Berish
     </button>
     {% else %}
@@ -162,11 +179,16 @@
     <div class="modal-box" style="text-align:left;max-width:500px;">
 
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
-            <i class="fa-solid fa-clipboard-check" style="font-size:24px;color:var(--cyan);"></i>
-            <div class="modal-title" style="margin:0;">Buyurtma Berish</div>
+            <i class="fa-solid fa-clipboard-check" id="orderModalIcon" style="font-size:24px;color:var(--cyan);"></i>
+            <div class="modal-title" id="orderModalHeader" style="margin:0;">Buyurtma Berish</div>
         </div>
         <p class="modal-text" id="orderModalTitle"
-           style="text-align:left;color:var(--cyan);font-weight:700;margin-bottom:20px;font-size:16px;"></p>
+           style="text-align:left;color:var(--cyan);font-weight:700;margin-bottom:8px;font-size:16px;"></p>
+        <div id="orderModalQueueNote" style="display:none;margin-bottom:14px;padding:10px 14px;border-radius:10px;
+             background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#f59e0b;font-size:13px;">
+            <i class="fa-solid fa-people-line"></i>
+            Ishchi hozir band. Siz <strong id="queuePosBadge">2</strong>-o'rinda navbatda turasiz.
+        </div>
 
         <form method="post" id="orderForm">
             {% csrf_token %}
@@ -227,9 +249,62 @@
                     placeholder="Qo'shimcha xohishlar, mashina holati haqida..."></textarea>
             </div>
 
+            <!-- ✅ YANGI: Online to'lov bo'limi -->
+            <div class="pay-section">
+                <div class="pay-section-title">
+                    <i class="fa-solid fa-credit-card"></i> Online to'lov
+                    <span class="pay-amount" id="payAmount">— so'm</span>
+                </div>
+
+                <div class="method-row">
+                    <label class="method-opt">
+                        <input type="radio" name="method" value="card" checked onchange="toggleCardFields(this.value)">
+                        <span class="method-lbl"><i class="fa-solid fa-credit-card"></i> Karta</span>
+                    </label>
+                    <label class="method-opt">
+                        <input type="radio" name="method" value="click" onchange="toggleCardFields(this.value)">
+                        <span class="method-lbl"><i class="fa-solid fa-bolt"></i> Click</span>
+                    </label>
+                    <label class="method-opt">
+                        <input type="radio" name="method" value="payme" onchange="toggleCardFields(this.value)">
+                        <span class="method-lbl"><i class="fa-solid fa-money-bill-wave"></i> Payme</span>
+                    </label>
+                    <label class="method-opt">
+                        <input type="radio" name="method" value="cash" onchange="toggleCardFields(this.value)">
+                        <span class="method-lbl"><i class="fa-solid fa-coins"></i> Naqd</span>
+                    </label>
+                </div>
+
+                <div id="cardFields">
+                    <div class="form-group">
+                        <label class="form-label">Karta raqami</label>
+                        <input type="text" name="card_number" id="cardNum" class="form-control"
+                               inputmode="numeric" maxlength="19" placeholder="0000 0000 0000 0000"
+                               oninput="onCardNum(this)">
+                    </div>
+                    <div class="form-group" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div>
+                            <label class="form-label">Amal qiladi</label>
+                            <input type="text" name="expiry" class="form-control" maxlength="5"
+                                   placeholder="MM/YY" oninput="onExpiry(this)">
+                        </div>
+                        <div>
+                            <label class="form-label">CVV</label>
+                            <input type="password" name="cvv" class="form-control" maxlength="3"
+                                   inputmode="numeric" placeholder="•••">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Karta egasi</label>
+                        <input type="text" name="holder_name" class="form-control"
+                               placeholder="Masalan, ALISHER SAFAROV">
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-btns" style="justify-content:flex-start;">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fa-solid fa-check"></i> Buyurtma Berish
+                <button type="submit" class="btn btn-primary" id="orderSubmitBtn">
+                    <i class="fa-solid fa-lock"></i> To'lash va buyurtma berish
                 </button>
                 <button type="button" class="btn btn-ghost" onclick="closeOrder()">
                     <i class="fa-solid fa-xmark"></i> Bekor
@@ -344,7 +419,7 @@
 }
 .time-type-btn:hover { border-color: var(--cyan); color: var(--cyan); }
 
-/* Ishchi band — sariq disabled tugma */
+/* Ishchi band — sariq disabled tugma (eski stil saqlanmoqda) */
 .btn.btn-busy {
     background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(245,158,11,0.08));
     color: var(--amber, #f59e0b);
@@ -362,6 +437,91 @@
     0%,100% { transform: rotate(0deg); }
     50%     { transform: rotate(180deg); }
 }
+
+/* Navbat info — band ishchida tugma ustida ko'rsatiladi */
+.queue-info {
+    font-size: 12px;
+    color: #f59e0b;
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.22);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+.queue-info strong { color: #ffb347; font-weight: 800; }
+
+/* Navbatga yozilish tugmasi — sariq aksent */
+.btn.btn-queue {
+    background: linear-gradient(135deg, rgba(245,158,11,0.95), rgba(217,119,6,0.95));
+    color: #1a0f00;
+    border: 1.5px solid rgba(245,158,11,0.65);
+    font-weight: 700;
+    letter-spacing: .3px;
+    box-shadow: 0 4px 14px rgba(245,158,11,0.25);
+    transition: all .2s;
+}
+.btn.btn-queue:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(245,158,11,0.35);
+}
+
+/* Online to'lov bo'limi */
+.pay-section {
+    margin-top: 6px;
+    padding: 14px;
+    border: 1px dashed rgba(0,200,255,0.28);
+    border-radius: 12px;
+    background: rgba(0,200,255,0.04);
+    margin-bottom: 14px;
+}
+.pay-section-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+}
+.pay-amount {
+    margin-left: auto;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--cyan);
+}
+.method-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+.method-opt input { display: none; }
+.method-lbl {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 12px;
+    background: var(--card);
+    border: 1.3px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+}
+.method-opt input:checked + .method-lbl {
+    border-color: var(--cyan);
+    background: rgba(0,200,255,0.1);
+    color: var(--cyan);
+}
+.method-lbl:hover { border-color: var(--cyan); color: var(--cyan); }
 </style>
 
 {% endblock %}
@@ -369,11 +529,35 @@
 {% block extra_js %}
 <script>
 // Modal ochish
-function showOrder(adPk, title, price, worker) {
+function showOrder(adPk, title, price, worker, isQueue, position) {
     document.getElementById('orderModalTitle').textContent =
         title + ' — ' + price.toLocaleString() + " so'm | " + worker;
     document.getElementById('orderForm').action =
         '/customer/orders/' + adPk + '/book/';
+
+    // To'lov summasi
+    document.getElementById('payAmount').textContent = price.toLocaleString() + " so'm";
+
+    // Navbat holati
+    const queueNote = document.getElementById('orderModalQueueNote');
+    const header    = document.getElementById('orderModalHeader');
+    const submitBtn = document.getElementById('orderSubmitBtn');
+    if (isQueue) {
+        document.getElementById('queuePosBadge').textContent = position;
+        queueNote.style.display = 'block';
+        header.textContent = 'Navbatga Yozilish';
+        if (submitBtn) submitBtn.innerHTML =
+            '<i class="fa-solid fa-lock"></i> To\'lash va navbatga yozilish';
+    } else {
+        queueNote.style.display = 'none';
+        header.textContent = 'Buyurtma Berish';
+        if (submitBtn) submitBtn.innerHTML =
+            '<i class="fa-solid fa-lock"></i> To\'lash va buyurtma berish';
+    }
+
+    // Karta maydonlarini default usulga moslash
+    const checkedMethod = document.querySelector('input[name="method"]:checked');
+    toggleCardFields(checkedMethod ? checkedMethod.value : 'card');
 
     // Minimal vaqt: hozirdan 30 daqiqa keyin
     const now = new Date(Date.now() + 30 * 60 * 1000);
@@ -401,6 +585,30 @@ function toggleScheduled(show) {
     block.style.display = show ? 'block' : 'none';
     input.name = show ? 'scheduled_time' : '';
     input.required = show;
+}
+
+// To'lov usuliga qarab karta maydonlarini yashirish/ko'rsatish
+function toggleCardFields(method) {
+    const block = document.getElementById('cardFields');
+    if (!block) return;
+    const show = (method === 'card');
+    block.style.display = show ? 'block' : 'none';
+    block.querySelectorAll('input').forEach(i => {
+        if (i.name === 'card_number' || i.name === 'holder_name') {
+            i.required = show;
+        }
+    });
+}
+
+// Karta raqamini formatlash: 4 talab guruh
+function onCardNum(input) {
+    let digits = input.value.replace(/\D/g, '').slice(0, 16);
+    input.value = digits.match(/.{1,4}/g)?.join(' ') || '';
+}
+// MM/YY maskasi
+function onExpiry(input) {
+    let d = input.value.replace(/\D/g, '').slice(0, 4);
+    input.value = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
 }
 
 // Mashina turi xato modali

@@ -2,11 +2,13 @@ from django.urls import path
 from . import views
 from . import reports as reports_views
 from finance import views as finance_views
+from finance import forecast as finance_forecast
 
 app_name = 'owner'
 
 urlpatterns = [
     path('dashboard/',              views.dashboard,        name='dashboard'),
+    path('orders/history/',         views.order_history,    name='order_history'),
     path('workers/',                views.workers,          name='workers'),
     path('workers/approve/<int:pk>/', views.approve_worker, name='approve_worker'),
     path('workers/delete/<int:pk>/',  views.delete_worker,  name='delete_worker'),
@@ -28,6 +30,7 @@ urlpatterns = [
 
     # Kirim & Chiqim
     path('finance/',                        finance_views.finance,        name='finance'),
+    path('finance/forecast/',               finance_forecast.forecast,    name='finance_forecast'),
     path('finance/expense/add/',            finance_views.add_expense,    name='add_expense'),
     path('finance/income/add/',             finance_views.add_income,     name='add_income'),
     path('finance/expense/delete/<int:pk>/',finance_views.delete_expense, name='delete_expense'),

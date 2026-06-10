@@ -71,9 +71,9 @@ class Order(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
 
     # Buyurtmani yakunlash uchun qabul qilingandan beri o'tishi shart bo'lgan vaqt.
-    # Yengil mashina — 20 daqiqa, yuk mashina — 50 daqiqa.
-    LIGHT_WORK_MINUTES = 20
-    HEAVY_WORK_MINUTES = 50
+    # Yengil mashina — 2 daqiqa, yuk mashina — 5 daqiqa.
+    LIGHT_WORK_MINUTES = 2
+    HEAVY_WORK_MINUTES = 5
 
     class Meta:
         verbose_name = _('Buyurtma')
@@ -118,6 +118,33 @@ class Order(models.Model):
         if m is None:
             return 0
         return max(0, math.ceil(self.required_work_minutes() - m))
+
+    def queue_position(self):
+        """Bu buyurtma ishchining navbatida qaysi o'rinda turibdi.
+
+        1 — hozir xizmat qilinmoqda (ACCEPTED / IN_PROGRESS) yoki birinchi
+        navbatda turgan PENDING. Faol buyurtma bo'lsa, undagi
+        PENDING'lar 2, 3, ... bo'ladi. Yopilgan (completed/rejected/cancelled)
+        buyurtmalar uchun None qaytaradi.
+        """
+        if self.status not in (
+            Order.Status.PENDING,
+            Order.Status.ACCEPTED,
+            Order.Status.IN_PROGRESS,
+        ):
+            return None
+        if self.status in (Order.Status.ACCEPTED, Order.Status.IN_PROGRESS):
+            return 1
+        has_active = Order.objects.filter(
+            worker_id=self.worker_id,
+            status__in=[Order.Status.ACCEPTED, Order.Status.IN_PROGRESS],
+        ).exists()
+        ahead = Order.objects.filter(
+            worker_id=self.worker_id,
+            status=Order.Status.PENDING,
+            created_at__lt=self.created_at,
+        ).count()
+        return ahead + (2 if has_active else 1)
 
     def is_scheduled(self):
         return self.scheduled_time is not None
@@ -342,6 +369,79 @@ class BonusClaim(models.Model):
     def __str__(self):
         return f"{self.user} — {self.bonus.name}"
 
+
+class Receipt(models.Model):
+    """Soxta to'lov cheki. Faqat oxirgi 3 ta saqlanadi (mijoz uchun)."""
+
+    KEEP_LAST = 3
+
+    class Method(models.TextChoices):
+        CARD   = 'card',   _('Bank kartasi')
+        CLICK  = 'click',  _('Click')
+        PAYME  = 'payme',  _('Payme')
+        CASH   = 'cash',   _('Naqd pul')
+
+    order = models.OneToOneField(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='receipt',
+        verbose_name=_('Buyurtma'),
+    )
+    customer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='receipts',
+        verbose_name=_('Mijoz'),
+    )
+    amount = models.DecimalField(
+        max_digits=10, decimal_places=0,
+        verbose_name=_("Summa (so'm)"),
+    )
+    method = models.CharField(
+        max_length=10,
+        choices=Method.choices,
+        default=Method.CARD,
+        verbose_name=_("To'lov usuli"),
+    )
+    card_last4 = models.CharField(
+        max_length=4, blank=True,
+        verbose_name=_('Karta oxirgi 4'),
+    )
+    holder_name = models.CharField(
+        max_length=80, blank=True,
+        verbose_name=_('Karta egasi'),
+    )
+    transaction_id = models.CharField(
+        max_length=24, unique=True,
+        verbose_name=_('Tranzaksiya ID'),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('Chek')
+        verbose_name_plural = _('Cheklar')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Chek #{self.transaction_id} — {self.amount} so'm"
+
+    @staticmethod
+    def generate_txn_id():
+        """Soxta tranzaksiya ID — 16 belgili HEX."""
+        import secrets
+        return secrets.token_hex(8).upper()
+
+    @classmethod
+    def prune_old(cls, customer):
+        """Mijozda KEEP_LAST tadan ortiqlarini o'chiradi (eng eskilarini)."""
+        ids = list(
+            cls.objects.filter(customer=customer)
+            .order_by('-created_at')
+            .values_list('id', flat=True)[cls.KEEP_LAST:]
+        )
+        if ids:
+            cls.objects.filter(id__in=ids).delete()
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -381,6 +481,63 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.user} — {self.title}"
+
+
+class Reminder(models.Model):
+    """Avto yuvish eslatmalari — foydalanuvchi yoki avto-faolsizlik."""
+
+    # Avto-eslatma uchun chegaralar (kun)
+    INACTIVE_THRESHOLD_DAYS = 7   # Buyurtmasiz qancha kun o'tsa eslatma jo'natiladi
+    INACTIVE_COOLDOWN_DAYS  = 7   # Avtomatik eslatma orasidagi minimal interval
+
+    class Kind(models.TextChoices):
+        USER_REQUEST  = 'user_request',  _("Foydalanuvchi so'rovi")
+        AUTO_INACTIVE = 'auto_inactive', _("Avtomatik (faolsizlik)")
+
+    class Condition(models.TextChoices):
+        ANY     = 'any',     _('Shartsiz')
+        SUNNY   = 'sunny',   _('Quyoshli / yomg\'irsiz havo')
+        NO_RAIN = 'no_rain', _('Yomg\'ir yog\'masa')
+
+    class Status(models.TextChoices):
+        PENDING   = 'pending',   _('Kutilmoqda')
+        SENT      = 'sent',      _('Yuborildi')
+        SKIPPED   = 'skipped',   _("Shart bajarilmadi")
+        CANCELLED = 'cancelled', _('Bekor qilindi')
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='reminders',
+        verbose_name=_('Foydalanuvchi'),
+    )
+    kind = models.CharField(
+        max_length=20, choices=Kind.choices,
+        default=Kind.USER_REQUEST,
+        verbose_name=_('Turi'),
+    )
+    trigger_date = models.DateField(verbose_name=_('Qachon eslatish'))
+    condition = models.CharField(
+        max_length=10, choices=Condition.choices,
+        default=Condition.ANY,
+        verbose_name=_('Shart'),
+    )
+    title   = models.CharField(max_length=200, verbose_name=_('Sarlavha'))
+    message = models.TextField(verbose_name=_('Xabar matni'))
+    status  = models.CharField(
+        max_length=12, choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name=_('Holat'),
+    )
+    sent_at    = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('Eslatma')
+        verbose_name_plural = _('Eslatmalar')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_kind_display()} — {self.user} ({self.trigger_date})"
 
 
 class WeatherCache(models.Model):

@@ -1,0 +1,86 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Cheklarim{% endblock %}
+{% block page_title %}Cheklarim{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'customer:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'customer:my_cars' %}" class="nav-item"><i class="fa-solid fa-truck-moving"></i> Mashinalarim</a>
+<a href="{% url 'customer:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
+<a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'customer:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'customer:receipts_list' %}" class="nav-item active"><i class="fa-solid fa-receipt"></i> Cheklarim</a>
+<a href="{% url 'customer:reminders_list' %}" class="nav-item"><i class="fa-solid fa-bell"></i> Eslatmalarim</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block content %}
+<style>
+.r-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+.r-mini {
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:18px; backdrop-filter:blur(16px); transition:all .25s;
+}
+.r-mini:hover { border-color:rgba(0,200,255,0.3); transform:translateY(-3px); }
+.r-head {
+    display:flex; align-items:center; gap:10px; margin-bottom:12px;
+    padding-bottom:10px; border-bottom:1px dashed var(--border);
+}
+.r-icon {
+    width:42px; height:42px; border-radius:11px; background:rgba(0,200,255,0.08);
+    border:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+    color:var(--cyan); font-size:18px;
+}
+.r-title { font-weight:800; font-size:13px; color:var(--text); }
+.r-txn-id { font-size:10px; color:var(--muted); font-family:monospace; letter-spacing:0.5px; }
+.r-amt { font-size:22px; font-weight:800; color:var(--cyan); margin:8px 0; }
+.r-info { font-size:11px; color:var(--muted); margin-bottom:4px; }
+.r-info i { width:14px; }
+
+.r-info-banner {
+    background:rgba(0,200,255,0.05); border:1px solid rgba(0,200,255,0.18);
+    border-radius:10px; padding:12px 16px; margin-bottom:18px;
+    font-size:13px; color:var(--muted); display:flex; align-items:center; gap:10px;
+}
+.r-info-banner i { color:var(--cyan); font-size:16px; }
+.r-info-banner strong { color:var(--cyan); }
+</style>
+
+<div class="r-info-banner">
+    <i class="fa-solid fa-circle-info"></i>
+    Tizim faqat <strong>oxirgi {{ keep_last }} ta chek</strong>ni saqlaydi. Yangi to'lov bo'lganda eskilari avtomatik o'chiriladi.
+</div>
+
+{% if receipts %}
+<div class="r-grid">
+    {% for r in receipts %}
+    <div class="r-mini">
+        <div class="r-head">
+            <div class="r-icon"><i class="fa-solid fa-receipt"></i></div>
+            <div style="flex:1;">
+                <div class="r-title">{{ r.order.service_ad.get_service_type_display|default:"Xizmat" }}</div>
+                <div class="r-txn-id">№ {{ r.transaction_id }}</div>
+            </div>
+        </div>
+
+        <div class="r-amt">{{ r.amount|floatformat:0 }} so'm</div>
+
+        <div class="r-info"><i class="fa-solid fa-user-gear"></i> {{ r.order.worker.get_full_name }}</div>
+        <div class="r-info"><i class="fa-solid fa-car"></i> {{ r.order.car }}</div>
+        <div class="r-info"><i class="fa-solid fa-credit-card"></i> {{ r.get_method_display }}{% if r.card_last4 %} · ****{{ r.card_last4 }}{% endif %}</div>
+        <div class="r-info"><i class="fa-solid fa-calendar"></i> {{ r.created_at|date:"d.m.Y H:i" }}</div>
+
+        <a href="{% url 'customer:receipt_detail' r.pk %}" class="btn btn-primary" style="width:100%;margin-top:14px;">
+            <i class="fa-solid fa-eye"></i> Chekni ko'rish
+        </a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon"><i class="fa-solid fa-receipt"></i></div>
+    <p>Hali to'lov cheklari yo'q</p>
+    <p style="font-size:12px;color:var(--muted);">Buyurtmangizni yakunlab to'lov qilganingizdan keyin chek shu yerda paydo bo'ladi.</p>
+</div>
+{% endif %}
+{% endblock %}

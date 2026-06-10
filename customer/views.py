@@ -1,5 +1,5 @@
 from django.db.models import Sum
-from core.models import Order, Bonus, LoyaltyToken, Review
+from core.models import Order, Bonus, LoyaltyToken, Review, Receipt, Reminder
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -122,7 +122,8 @@ def orders(request):
         selected_car = cars.first()
 
     # Mashina turiga qarab e'lonlarni filtrlaymiz
-    from django.db.models import Avg, Count, F, Exists, OuterRef
+    from django.db.models import Avg, Count, F, Exists, OuterRef, Subquery, IntegerField
+    from django.db.models.functions import Coalesce
     # Ishchi band bo'lsa (qabul qilgan yoki jarayondagi buyurtmasi bo'lsa)
     # — e'londa "band" deb ko'rsatamiz. PENDING band hisoblanmaydi: ishchi
     # hali tanlash bosqichida, bir vaqtda bir necha so'rov turishi mumkin.
@@ -133,10 +134,20 @@ def orders(request):
             Order.Status.IN_PROGRESS,
         ],
     )
+    # Ishchining navbatidagi PENDING buyurtmalar soni (faqat sanash uchun
+    # subquery — ServiceAd asosiy queryga ta'sir qilmaydi).
+    queue_subq = Order.objects.filter(
+        worker_id=OuterRef('worker_id'),
+        status=Order.Status.PENDING,
+    ).order_by().values('worker_id').annotate(c=Count('id')).values('c')
     ads = ServiceAd.objects.filter(is_active=True).select_related('worker').annotate(
         worker_avg=Avg('worker__worker_orders__review__rating'),
         worker_reviews=Count('worker__worker_orders__review', distinct=True),
         worker_is_busy=Exists(busy_subq),
+        worker_queue_count=Coalesce(
+            Subquery(queue_subq, output_field=IntegerField()),
+            0,
+        ),
     ).order_by(F('worker_avg').desc(nulls_last=True), '-created_at')
 
     if selected_car:
@@ -157,61 +168,89 @@ def orders(request):
 
 @customer_required
 def book_order(request, ad_pk):
-    if request.method == 'POST':
-        ad     = get_object_or_404(ServiceAd, pk=ad_pk, is_active=True)
-        car_id = request.POST.get('car_id')
-        note   = request.POST.get('note', '').strip()
-        scheduled = request.POST.get('scheduled_time')  # Qo‘shildi
+    """Avval to'lov, keyin buyurtma — Order + Receipt atomik yaratiladi."""
+    if request.method != 'POST':
+        return redirect('customer:orders')
 
-        if not car_id:
-            messages.error(request, "Mashina tanlang.")
-            return redirect('customer:orders')
+    from django.db import transaction
 
-        car = get_object_or_404(Car, pk=car_id, owner=request.user)
+    ad     = get_object_or_404(ServiceAd, pk=ad_pk, is_active=True)
+    car_id = request.POST.get('car_id')
+    note   = request.POST.get('note', '').strip()
+    scheduled = request.POST.get('scheduled_time')
 
-        # ✅ Ishchi hozir band emasligini tekshirish (qabul qilingan yoki jarayonda)
-        is_busy = Order.objects.filter(
+    # — Buyurtma maydonlari validatsiyasi —
+    if not car_id:
+        messages.error(request, "Mashina tanlang.")
+        return redirect('customer:orders')
+
+    car = get_object_or_404(Car, pk=car_id, owner=request.user)
+
+    # Bir mijoz bir ishchiga faol buyurtma turgan bo'lsa, dublikat oldi olinadi
+    already = Order.objects.filter(
+        customer=request.user,
+        worker=ad.worker,
+        status__in=[
+            Order.Status.PENDING,
+            Order.Status.ACCEPTED,
+            Order.Status.IN_PROGRESS,
+        ],
+    ).exists()
+    if already:
+        messages.warning(
+            request,
+            "Bu ishchida sizning faol buyurtmangiz allaqachon bor. "
+            "Avval u yakunlansin yoki bekor qiling."
+        )
+        return redirect('customer:order_history')
+
+    # Mashina turi
+    if ad.service_type == 'heavy' and car.car_type != 'heavy':
+        messages.error(request, "Bu e'lon faqat yuk mashinalar uchun!")
+        return redirect('customer:orders')
+    if ad.service_type != 'heavy' and car.car_type == 'heavy':
+        messages.error(request, "Yuk mashina uchun faqat 'Yuk transport' e'lonlaridan buyurtma bering!")
+        return redirect('customer:orders')
+
+    # Ish vaqti
+    if scheduled:
+        from datetime import datetime
+        scheduled_dt = datetime.fromisoformat(scheduled)
+        weekday = scheduled_dt.weekday()
+        schedule = WorkSchedule.objects.filter(
             worker=ad.worker,
-            status__in=[
-                Order.Status.ACCEPTED,
-                Order.Status.IN_PROGRESS,
-            ],
-        ).exists()
-        if is_busy:
-            messages.error(
+            weekday=weekday,
+            is_active=True,
+        ).first()
+        if not schedule:
+            messages.warning(request, "Ishchi bu kuni ishlamaydi. Boshqa kun tanlang.")
+            return redirect('customer:orders')
+        if not (schedule.start_time <= scheduled_dt.time() <= schedule.end_time):
+            messages.warning(
                 request,
-                "Bu ishchi hozir band. Iltimos, biroz keyin urinib ko'ring "
-                "yoki boshqa ishchining e'lonidan buyurtma bering."
+                f"Ishchi bu kuni {schedule.start_time.strftime('%H:%M')}–"
+                f"{schedule.end_time.strftime('%H:%M')} oralig'ida ishlaydi."
             )
             return redirect('customer:orders')
 
-        # ✅ Mashina turiga moslik tekshiruvi
-        if ad.service_type == 'heavy' and car.car_type != 'heavy':
-            messages.error(request, "Bu e'lon faqat yuk mashinalar uchun!")
+    # — To'lov maydonlari validatsiyasi (online to'lov, soxta) —
+    method = request.POST.get('method', Receipt.Method.CARD)
+    if method not in dict(Receipt.Method.choices):
+        method = Receipt.Method.CARD
+
+    card_number = ''.join(c for c in request.POST.get('card_number', '') if c.isdigit())
+    holder      = request.POST.get('holder_name', '').strip()[:80]
+
+    if method == Receipt.Method.CARD:
+        if len(card_number) < 12:
+            messages.error(request, "Karta raqamini to'liq kiriting (kamida 12 raqam).")
             return redirect('customer:orders')
-        if ad.service_type != 'heavy' and car.car_type == 'heavy':
-            messages.error(request, "Yuk mashina uchun faqat 'Yuk transport' e'lonlaridan buyurtma bering!")
+        if not holder:
+            messages.error(request, "Karta egasi ismini kiriting.")
             return redirect('customer:orders')
 
-        # ✅ Ish vaqti tekshiruvi (agar vaqt berilgan bo‘lsa)
-        if scheduled:
-            from datetime import datetime
-            scheduled_dt = datetime.fromisoformat(scheduled)
-            weekday = scheduled_dt.weekday()
-            schedule = WorkSchedule.objects.filter(
-                worker=ad.worker,
-                weekday=weekday,
-                is_active=True
-            ).first()
-            if not schedule:
-                messages.warning(request, "Ishchi bu kuni ishlamaydi. Boshqa kun tanlang.")
-                return redirect('customer:orders')
-            if not (schedule.start_time <= scheduled_dt.time() <= schedule.end_time):
-                messages.warning(request,
-                    f"Ishchi bu kuni {schedule.start_time.strftime('%H:%M')}–"
-                    f"{schedule.end_time.strftime('%H:%M')} oralig'ida ishlaydi.")
-                return redirect('customer:orders')
-
+    # — Atomik yaratish: Order + Receipt —
+    with transaction.atomic():
         order = Order.objects.create(
             customer=request.user,
             worker=ad.worker,
@@ -220,20 +259,37 @@ def book_order(request, ad_pk):
             note=note,
             total_price=ad.price,
             status=Order.Status.PENDING,
-            scheduled_time=scheduled,   # ✅ saqlash
+            scheduled_time=scheduled,
+        )
+        receipt = Receipt.objects.create(
+            order=order,
+            customer=request.user,
+            amount=ad.price,
+            method=method,
+            card_last4=card_number[-4:] if card_number else '',
+            holder_name=holder,
+            transaction_id=Receipt.generate_txn_id(),
         )
 
-        # Eslatma: e'lon `is_active` ni qo'lda o'zgartirmaymiz — "band" holati
-        # buyurtma statusidan kelib chiqib hisoblanadi (worker_is_busy annotation).
+    # Oxirgi 3 ta chek saqlansin
+    Receipt.prune_old(request.user)
 
-        messages.success(request, "Buyurtma berildi! Ishchi tasdiqlashini kuting.")
-    return redirect('customer:order_history')
+    pos = order.queue_position()
+    if pos and pos > 1:
+        messages.success(
+            request,
+            f"To'lov amalga oshirildi va navbatga yozildingiz — siz {pos}-o'rindasiz."
+        )
+    else:
+        messages.success(request, "To'lov amalga oshirildi! Buyurtma berildi.")
+
+    return redirect('customer:receipt_detail', pk=receipt.pk)
 
 
 @customer_required
 def order_history(request):
     orders_list = Order.objects.filter(customer=request.user).select_related(
-        'worker','car','service_ad'
+        'worker','car','service_ad','receipt'
     ).prefetch_related('review').order_by('-created_at')
     return render(request, 'customer/order_history.html', {'orders': orders_list})
 
@@ -278,6 +334,50 @@ def claim_bonus(request, pk):
         if success: messages.success(request, msg)
         else: messages.error(request, msg)
     return redirect('customer:bonuses')
+
+
+@customer_required
+def receipt_detail(request, pk):
+    """Bitta chekni ko'rsatish."""
+    receipt = get_object_or_404(Receipt, pk=pk, customer=request.user)
+    return render(request, 'customer/receipt.html', {'receipt': receipt})
+
+
+@customer_required
+def receipts_list(request):
+    """Mijozning oxirgi 3 ta cheki."""
+    receipts = Receipt.objects.filter(
+        customer=request.user
+    ).select_related('order', 'order__worker', 'order__service_ad')[:Receipt.KEEP_LAST]
+    return render(request, 'customer/receipts.html', {
+        'receipts': receipts,
+        'keep_last': Receipt.KEEP_LAST,
+    })
+
+
+@customer_required
+def reminders_list(request):
+    """Mijozning AI eslatmalari va avto-eslatmalari."""
+    items = Reminder.objects.filter(user=request.user).order_by(
+        '-created_at'
+    )[:50]
+    return render(request, 'customer/reminders.html', {
+        'reminders': items,
+    })
+
+
+@customer_required
+def reminder_cancel(request, pk):
+    """Kutilayotgan eslatmani bekor qilish."""
+    if request.method == 'POST':
+        rem = get_object_or_404(
+            Reminder, pk=pk, user=request.user,
+            status=Reminder.Status.PENDING,
+        )
+        rem.status = Reminder.Status.CANCELLED
+        rem.save(update_fields=['status'])
+        messages.info(request, "Eslatma bekor qilindi.")
+    return redirect('customer:reminders_list')
 
 
 @customer_required

@@ -1,0 +1,150 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Buyurtmalar tarixi{% endblock %}
+{% block page_title %}Buyurtmalar tarixi{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+<style>
+.stat-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:18px; }
+.stat-mini {
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:16px; backdrop-filter:blur(14px);
+}
+.stat-mini .lbl { font-size:11px; color:var(--muted); letter-spacing:1.5px; text-transform:uppercase; margin-bottom:6px; }
+.stat-mini .val { font-family:'Bebas Neue',sans-serif; font-size:32px; line-height:1; color:#fff; }
+.stat-mini.green .val { color:#00e87a; }
+.stat-mini.red   .val { color:#ff4d6a; }
+.stat-mini.cyan  .val { color:var(--cyan); }
+
+.filter-bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+.filter-bar select, .filter-bar a {
+    background:var(--card); border:1px solid var(--border); color:var(--text);
+    padding:8px 12px; border-radius:8px; font-size:12px;
+}
+.filter-bar a.reset { text-decoration:none; }
+.filter-bar a.reset:hover { color:var(--cyan); border-color:var(--cyan); }
+
+.paid-pill, .unpaid-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:11px; font-weight:800; padding:3px 10px; border-radius:999px;
+    letter-spacing:0.3px;
+}
+.paid-pill {
+    background:rgba(0,232,122,0.12); color:#00e87a; border:1px solid rgba(0,232,122,0.3);
+}
+.unpaid-pill {
+    background:rgba(255,77,106,0.10); color:#ff4d6a; border:1px solid rgba(255,77,106,0.28);
+}
+.txn-id { font-family:monospace; font-size:10px; color:var(--muted); margin-top:3px; letter-spacing:0.5px; }
+</style>
+
+<!-- STATISTIKA -->
+<div class="stat-row">
+    <div class="stat-mini">
+        <div class="lbl">Jami buyurtmalar</div>
+        <div class="val">{{ total_count }}</div>
+    </div>
+    <div class="stat-mini green">
+        <div class="lbl">To'langan</div>
+        <div class="val">{{ paid_count }}</div>
+    </div>
+    <div class="stat-mini red">
+        <div class="lbl">To'lanmagan</div>
+        <div class="val">{{ unpaid_count }}</div>
+    </div>
+    <div class="stat-mini cyan">
+        <div class="lbl">To'lov summasi</div>
+        <div class="val">{{ paid_sum|floatformat:0 }}</div>
+    </div>
+</div>
+
+<!-- FILTR -->
+<form method="get" class="filter-bar">
+    <span style="color:var(--muted);font-size:12px;">
+        <i class="fa-solid fa-filter"></i> Filtr:
+    </span>
+    <select name="status" onchange="this.form.submit()">
+        <option value="">Barcha holatlar</option>
+        {% for val, label in statuses %}
+        <option value="{{ val }}" {% if val == status_filter %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <select name="payment" onchange="this.form.submit()">
+        <option value="">Barcha to'lovlar</option>
+        <option value="paid"   {% if payment_filter == 'paid' %}selected{% endif %}>To'langan</option>
+        <option value="unpaid" {% if payment_filter == 'unpaid' %}selected{% endif %}>To'lanmagan</option>
+    </select>
+    {% if status_filter or payment_filter %}
+    <a href="{% url 'owner:order_history' %}" class="reset">
+        <i class="fa-solid fa-xmark"></i> Tozalash
+    </a>
+    {% endif %}
+</form>
+
+<!-- JADVAL -->
+<div class="table-card">
+    <div class="table-head">
+        <div class="table-head-title">
+            <i class="fa-solid fa-clipboard-list"></i> Barcha Buyurtmalar
+        </div>
+        <span style="color:var(--muted);font-size:13px;">{{ orders|length }} ta ko'rsatildi</span>
+    </div>
+
+    {% if orders %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Mijoz</th>
+                <th>Ishchi</th>
+                <th>Mashina</th>
+                <th>Xizmat</th>
+                <th>Narx</th>
+                <th>Holat</th>
+                <th>To'lov</th>
+                <th>Sana</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for o in orders %}
+            <tr>
+                <td class="td-main">#{{ o.pk }}</td>
+                <td>{{ o.customer.get_full_name|default:o.customer }}</td>
+                <td>{{ o.worker.get_full_name|default:o.worker }}</td>
+                <td>{{ o.car|default:"—" }}</td>
+                <td>{{ o.service_ad.get_service_type_display|default:"—" }}</td>
+                <td class="td-main">{{ o.total_price|floatformat:0 }} so'm</td>
+                <td>
+                    <span class="badge badge-{{ o.status }}">
+                        <i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}
+                    </span>
+                </td>
+                <td>
+                    {% if o.receipt %}
+                    <span class="paid-pill">
+                        <i class="fa-solid fa-circle-check"></i> To'lov qilingan
+                    </span>
+                    <div class="txn-id">
+                        {{ o.receipt.get_method_display }}
+                        {% if o.receipt.card_last4 %} · ****{{ o.receipt.card_last4 }}{% endif %}
+                    </div>
+                    <div class="txn-id">№ {{ o.receipt.transaction_id }}</div>
+                    {% else %}
+                    <span class="unpaid-pill">
+                        <i class="fa-solid fa-circle-xmark"></i> To'lanmagan
+                    </span>
+                    {% endif %}
+                </td>
+                <td>{{ o.created_at|date:"d.m.Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+        <p>Filtrga mos buyurtmalar topilmadi</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Eslatmalarim{% endblock %}
+{% block page_title %}Eslatmalarim{% endblock %}
+
+{% block sidebar_nav %}
+<a href="{% url 'customer:dashboard' %}" class="nav-item"><i class="fa-solid fa-chart-line"></i> Dashboard</a>
+<a href="{% url 'customer:my_cars' %}" class="nav-item"><i class="fa-solid fa-truck-moving"></i> Mashinalarim</a>
+<a href="{% url 'customer:orders' %}" class="nav-item"><i class="fa-solid fa-clipboard-list"></i> Buyurtmalar</a>
+<a href="{% url 'customer:order_history' %}" class="nav-item"><i class="fa-solid fa-clock-rotate-left"></i> Tarix</a>
+<a href="{% url 'customer:bonuses' %}" class="nav-item"><i class="fa-solid fa-gift"></i> Bonuslar</a>
+<a href="{% url 'customer:receipts_list' %}" class="nav-item"><i class="fa-solid fa-receipt"></i> Cheklarim</a>
+<a href="{% url 'customer:reminders_list' %}" class="nav-item active"><i class="fa-solid fa-bell"></i> Eslatmalarim</a>
+<div class="nav-section">Sozlamalar</div>
+<a href="{% url 'customer:profile' %}" class="nav-item"><i class="fa-solid fa-user-gear"></i> Profil</a>
+{% endblock %}
+
+{% block content %}
+<style>
+.rem-info {
+    background:rgba(168,85,247,0.07);
+    border:1px solid rgba(168,85,247,0.22);
+    border-left:3px solid #c084fc;
+    border-radius:10px;
+    padding:14px 18px; margin-bottom:18px;
+    font-size:13.5px; color:var(--text); line-height:1.6;
+}
+.rem-info i { color:#c084fc; margin-right:6px; }
+.rem-info code {
+    background:rgba(168,85,247,0.12); padding:1px 6px;
+    border-radius:4px; font-size:12px; color:#c084fc;
+}
+
+.rem-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; }
+.rem-card {
+    background:var(--card); backdrop-filter:blur(14px);
+    border:1px solid var(--border); border-radius:14px;
+    padding:18px; position:relative;
+    transition:all .2s;
+}
+.rem-card:hover { border-color:rgba(168,85,247,0.3); transform:translateY(-2px); }
+.rem-card.pending  { border-left:3px solid #f59e0b; }
+.rem-card.sent     { border-left:3px solid #00e87a; }
+.rem-card.skipped  { border-left:3px solid var(--muted); opacity:0.75; }
+.rem-card.cancelled{ border-left:3px solid #ff4d6a; opacity:0.7; }
+
+.rem-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.rem-icon {
+    width:36px; height:36px; border-radius:10px;
+    background:rgba(168,85,247,0.1); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center; color:#c084fc;
+}
+.rem-icon.auto { background:rgba(0,200,255,0.1); color:var(--cyan); border-color:rgba(0,200,255,0.25); }
+.rem-title { font-size:13px; font-weight:700; color:var(--text); line-height:1.35; flex:1; }
+.rem-meta { font-size:11px; color:var(--muted); margin-bottom:10px; }
+.rem-msg {
+    font-size:12px; color:var(--soft); line-height:1.5;
+    background:rgba(0,0,0,0.18); border-radius:8px;
+    padding:10px 12px; margin-bottom:10px; max-height:80px; overflow:hidden;
+}
+.rem-foot { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.rem-status {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:999px;
+    letter-spacing:0.4px;
+}
+.rem-status.pending  { background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.28); }
+.rem-status.sent     { background:rgba(0,232,122,0.12); color:#00e87a; border:1px solid rgba(0,232,122,0.28); }
+.rem-status.skipped  { background:rgba(255,255,255,0.04); color:var(--muted); border:1px solid var(--border); }
+.rem-status.cancelled{ background:rgba(255,77,106,0.10); color:#ff4d6a; border:1px solid rgba(255,77,106,0.25); }
+
+.cond-pill {
+    display:inline-flex; align-items:center; gap:4px;
+    font-size:10px; padding:2px 8px; border-radius:999px;
+    background:rgba(0,200,255,0.08); color:var(--cyan);
+    border:1px solid rgba(0,200,255,0.22);
+}
+</style>
+
+<div class="rem-info">
+    <i class="fa-solid fa-wand-magic-sparkles"></i>
+    AI yordamida eslatma yarating! Misol uchun chat botga yozing:
+    <code>Ertaga ob-havo quyoshli bo'lsa mashinani yuvdirishni eslat</code> yoki
+    <code>Juma kuni yuvishni esimga sol</code>. Tizim eslatma sanasida emailingizga
+    xabar yuboradi. Bundan tashqari, 1 hafta buyurtma qilmagan mijozlarga
+    avtomatik eslatma keladi.
+</div>
+
+{% if reminders %}
+<div class="rem-grid">
+    {% for r in reminders %}
+    <div class="rem-card {{ r.status }}">
+        <div class="rem-head">
+            <div class="rem-icon {% if r.kind == 'auto_inactive' %}auto{% endif %}">
+                {% if r.kind == 'auto_inactive' %}
+                <i class="fa-solid fa-robot"></i>
+                {% else %}
+                <i class="fa-solid fa-bell"></i>
+                {% endif %}
+            </div>
+            <div class="rem-title">{{ r.title }}</div>
+        </div>
+
+        <div class="rem-meta">
+            <i class="fa-solid fa-calendar fa-xs"></i>
+            <strong>{{ r.trigger_date|date:"d.m.Y" }}</strong>
+            {% if r.condition != 'any' %}
+            · <span class="cond-pill">
+                {% if r.condition == 'sunny' %}<i class="fa-solid fa-sun"></i> Quyoshli{% endif %}
+                {% if r.condition == 'no_rain' %}<i class="fa-solid fa-cloud-sun"></i> Yomg'irsiz{% endif %}
+            </span>
+            {% endif %}
+            {% if r.kind == 'auto_inactive' %} · <span style="color:#c084fc;">Avtomatik</span>{% endif %}
+        </div>
+
+        <div class="rem-msg">{{ r.message|truncatechars:140 }}</div>
+
+        <div class="rem-foot">
+            <span class="rem-status {{ r.status }}">
+                {% if r.status == 'pending' %}<i class="fa-solid fa-hourglass-half"></i>{% endif %}
+                {% if r.status == 'sent' %}<i class="fa-solid fa-circle-check"></i>{% endif %}
+                {% if r.status == 'skipped' %}<i class="fa-solid fa-forward"></i>{% endif %}
+                {% if r.status == 'cancelled' %}<i class="fa-solid fa-circle-xmark"></i>{% endif %}
+                {{ r.get_status_display }}
+            </span>
+            {% if r.status == 'pending' %}
+            <form method="post" action="{% url 'customer:reminder_cancel' r.pk %}"
+                  onsubmit="return confirm('Eslatmani bekor qilasizmi?');" style="margin:0;">
+                {% csrf_token %}
+                <button class="btn btn-ghost btn-sm" title="Bekor qilish">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </form>
+            {% elif r.sent_at %}
+            <span style="font-size:10px;color:var(--muted);">
+                <i class="fa-solid fa-paper-plane fa-xs"></i> {{ r.sent_at|date:"d.m H:i" }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon"><i class="fa-solid fa-bell"></i></div>
+    <p>Hali eslatmalaringiz yo'q</p>
+    <p style="font-size:12px;color:var(--muted);">
+        Chat botga "ertaga yuvishni eslat" deb yozib, eslatma yarating.
+    </p>
+</div>
+{% endif %}
+{% endblock %}

@@ -30,10 +30,54 @@
 .g-badge.teal  { background:rgba(15,143,152,0.2);  border:1px solid rgba(15,143,152,0.3);  color:#0f8f98; }
 .g-badge.amber { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.2);  color:#f59e0b; }
 
-.g-list-card { background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+.g-list-card { background:var(--glass); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; overflow:hidden; margin-bottom:16px; }
 .g-list-head { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
 .g-list-title { font-size:15px; font-weight:700; display:flex; align-items:center; gap:8px; }
 .g-list-title i { color:var(--accent2); }
+
+/* Receipts bo'limi */
+.pay-pill {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:3px 9px; border-radius:999px;
+    font-size:10.5px; font-weight:700; letter-spacing:0.3px;
+    background:rgba(0,232,122,0.10); color:#00e87a;
+    border:1px solid rgba(0,232,122,0.28);
+    white-space:nowrap;
+}
+.pay-pill.card  { background:rgba(0,200,255,0.10); color:var(--cyan); border-color:rgba(0,200,255,0.28); }
+.pay-pill.click { background:rgba(245,158,11,0.10); color:#f59e0b; border-color:rgba(245,158,11,0.28); }
+.pay-pill.payme { background:rgba(168,85,247,0.10); color:#c084fc; border-color:rgba(168,85,247,0.28); }
+.pay-pill.cash  { background:rgba(0,232,122,0.10); color:#00e87a; border-color:rgba(0,232,122,0.28); }
+.pay-pill.none  { background:rgba(255,77,106,0.08); color:#ff4d6a; border-color:rgba(255,77,106,0.25); }
+
+.receipt-row {
+    display:grid;
+    grid-template-columns: 42px 1.4fr 1.3fr 130px 140px;
+    align-items:center; gap:14px;
+    padding:14px 20px; border-top:1px solid var(--border2);
+    transition:background .15s;
+}
+.receipt-row:hover { background:rgba(107,156,186,0.04); }
+.receipt-icon {
+    width:42px; height:42px; border-radius:11px;
+    background:rgba(0,200,255,0.08); border:1px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    color:var(--cyan); font-size:16px;
+}
+.r-main   { font-size:13px; font-weight:700; color:var(--text); }
+.r-sub    { font-size:11px; color:var(--muted); margin-top:2px; font-family:monospace; letter-spacing:0.4px; }
+.r-amount { font-size:15px; font-weight:800; color:var(--cyan); text-align:right; }
+.r-date   { font-size:12px; color:var(--muted); text-align:right; }
+
+@media (max-width:780px) {
+    .receipt-row { grid-template-columns: 36px 1fr 110px; }
+    .receipt-row .hide-sm { display:none; }
+}
+
+.empty-receipts {
+    padding:36px 20px; text-align:center; color:var(--muted);
+}
+.empty-receipts i { font-size:28px; color:rgba(0,200,255,0.4); margin-bottom:10px; display:block; }
 </style>
 {% endblock %}
 
@@ -83,6 +127,7 @@
                 <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Ishchi</th>
                 <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Mashina</th>
                 <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Holat</th>
+                <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">To'lov</th>
                 <th style="padding:10px 20px;text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;background:rgba(4,22,26,0.3);">Sana</th>
             </tr>
         </thead>
@@ -94,6 +139,19 @@
             <td style="padding:13px 20px;font-size:14px;color:var(--soft);">{{ o.worker.get_full_name|default:o.worker.email }}</td>
             <td style="padding:13px 20px;font-size:14px;color:var(--soft);">{{ o.car }}</td>
             <td style="padding:13px 20px;"><span class="badge badge-{{ o.status }}"><i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}</span></td>
+            <td style="padding:13px 20px;">
+                {% if o.receipt %}
+                <span class="pay-pill {{ o.receipt.method }}">
+                    {% if o.receipt.method == 'card' %}<i class="fa-solid fa-credit-card"></i>{% endif %}
+                    {% if o.receipt.method == 'click' %}<i class="fa-solid fa-bolt"></i>{% endif %}
+                    {% if o.receipt.method == 'payme' %}<i class="fa-solid fa-money-bill-wave"></i>{% endif %}
+                    {% if o.receipt.method == 'cash' %}<i class="fa-solid fa-coins"></i>{% endif %}
+                    {{ o.receipt.get_method_display }}{% if o.receipt.card_last4 %} ····{{ o.receipt.card_last4 }}{% endif %}
+                </span>
+                {% else %}
+                <span class="pay-pill none"><i class="fa-solid fa-circle-xmark"></i> Yo'q</span>
+                {% endif %}
+            </td>
             <td style="padding:13px 20px;font-size:13px;color:var(--muted);">{{ o.created_at|date:"d.m.Y H:i" }}</td>
         </tr>
         {% endfor %}
@@ -104,6 +162,55 @@
         <div class="empty-icon"><i class="fa-solid fa-inbox"></i></div>
         <p>Hali buyurtmalar yo'q</p>
     </div>
+    {% endif %}
+</div>
+
+<!-- 3: SO'NGGI TO'LOV CHEKLARI -->
+<div class="g-list-card">
+    <div class="g-list-head">
+        <div class="g-list-title">
+            <i class="fa-solid fa-receipt"></i> So'nggi to'lov cheklari
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;font-size:12px;color:var(--muted);">
+            <span><i class="fa-solid fa-hashtag fa-xs"></i> Jami: <strong style="color:var(--text);">{{ receipts_count }}</strong></span>
+            <span><i class="fa-solid fa-coins fa-xs" style="color:var(--cyan);"></i>
+                <strong style="color:var(--cyan);">{{ receipts_total_sum|floatformat:0 }}</strong> so'm
+            </span>
+        </div>
+    </div>
+    {% if recent_receipts %}
+        {% for r in recent_receipts %}
+        <div class="receipt-row">
+            <div class="receipt-icon">
+                {% if r.method == 'card' %}<i class="fa-solid fa-credit-card"></i>{% endif %}
+                {% if r.method == 'click' %}<i class="fa-solid fa-bolt"></i>{% endif %}
+                {% if r.method == 'payme' %}<i class="fa-solid fa-money-bill-wave"></i>{% endif %}
+                {% if r.method == 'cash' %}<i class="fa-solid fa-coins"></i>{% endif %}
+            </div>
+            <div>
+                <div class="r-main">{{ r.customer.get_full_name|default:r.customer.email }}</div>
+                <div class="r-sub">№ {{ r.transaction_id }}</div>
+            </div>
+            <div class="hide-sm">
+                <div class="r-main" style="font-weight:600;color:var(--soft);">#{{ r.order.id }} · {{ r.order.service_ad.get_service_type_display|default:"—" }}</div>
+                <div class="r-sub" style="font-family:inherit;letter-spacing:0;">{{ r.order.worker.get_full_name|default:"" }}</div>
+            </div>
+            <div class="hide-sm">
+                <span class="pay-pill {{ r.method }}">
+                    {{ r.get_method_display }}{% if r.card_last4 %} ····{{ r.card_last4 }}{% endif %}
+                </span>
+            </div>
+            <div>
+                <div class="r-amount">{{ r.amount|floatformat:0 }} <span style="font-size:11px;color:var(--muted);font-weight:400;">so'm</span></div>
+                <div class="r-date">{{ r.created_at|date:"d.m.Y H:i" }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-receipts">
+            <i class="fa-solid fa-receipt"></i>
+            <p>Hali to'lov cheklari yo'q</p>
+        </div>
     {% endif %}
 </div>
 

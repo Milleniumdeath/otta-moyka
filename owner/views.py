@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from accounts.models import User
-from core.models import Order, Bonus, LoyaltyToken
+from core.models import Order, Bonus, LoyaltyToken, Receipt
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -72,22 +72,74 @@ def pricelist_delete(request, pk):
 # ─────────────────────────────────────────────────────────────
 @owner_required
 def dashboard(request):
+    from django.db.models import Sum
+
     completed = Order.objects.filter(status=Order.Status.COMPLETED).count()
     rejected  = Order.objects.filter(status=Order.Status.REJECTED).count()
     workers   = User.objects.filter(role=User.Role.WORKER, is_approved=True)
     pending   = User.objects.filter(role=User.Role.WORKER, is_approved=False)
     customers = User.objects.filter(role=User.Role.CUSTOMER)
     recent    = Order.objects.select_related(
-        'customer', 'worker', 'car', 'service_ad'
+        'customer', 'worker', 'car', 'service_ad', 'receipt'
     ).order_by('-created_at')[:10]
 
+    # Oxirgi 10 ta to'lov cheki — alohida ko'rsatish uchun
+    recent_receipts = Receipt.objects.select_related(
+        'customer', 'order', 'order__worker', 'order__service_ad'
+    ).order_by('-created_at')[:10]
+    receipts_total_sum = Receipt.objects.aggregate(s=Sum('amount'))['s'] or 0
+    receipts_count     = Receipt.objects.count()
+
     return render(request, 'owner/dashboard.html', {
-        'completed_orders': completed,
-        'rejected_orders':  rejected,
-        'workers_count':    workers.count(),
-        'pending_count':    pending.count(),
-        'customers_count':  customers.count(),
-        'recent_orders':    recent,
+        'completed_orders':    completed,
+        'rejected_orders':     rejected,
+        'workers_count':       workers.count(),
+        'pending_count':       pending.count(),
+        'customers_count':     customers.count(),
+        'recent_orders':       recent,
+        'recent_receipts':     recent_receipts,
+        'receipts_total_sum':  receipts_total_sum,
+        'receipts_count':      receipts_count,
+    })
+
+
+# ─────────────────────────────────────────────────────────────
+# ORDER HISTORY (barcha buyurtmalar — to'lov statusi bilan)
+# ─────────────────────────────────────────────────────────────
+@owner_required
+def order_history(request):
+    from django.db.models import Sum, Count
+
+    orders_qs = Order.objects.select_related(
+        'customer', 'worker', 'car', 'service_ad', 'receipt'
+    ).order_by('-created_at')
+
+    # Filtrlar
+    status_filter = request.GET.get('status', '').strip()
+    payment_filter = request.GET.get('payment', '').strip()
+    if status_filter:
+        orders_qs = orders_qs.filter(status=status_filter)
+    if payment_filter == 'paid':
+        orders_qs = orders_qs.filter(receipt__isnull=False)
+    elif payment_filter == 'unpaid':
+        orders_qs = orders_qs.filter(receipt__isnull=True)
+
+    # Statistika
+    totals = Order.objects.aggregate(
+        total=Count('id'),
+        paid=Count('receipt'),
+    )
+    paid_sum = Receipt.objects.aggregate(s=Sum('amount'))['s'] or 0
+
+    return render(request, 'owner/order_history.html', {
+        'orders':         orders_qs[:200],
+        'total_count':    totals['total'],
+        'paid_count':     totals['paid'],
+        'unpaid_count':   totals['total'] - totals['paid'],
+        'paid_sum':       paid_sum,
+        'status_filter':  status_filter,
+        'payment_filter': payment_filter,
+        'statuses':       Order.Status.choices,
     })
 
 
