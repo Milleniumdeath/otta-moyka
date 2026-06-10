@@ -4,23 +4,75 @@
 <div class="table-card">
     <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-clipboard-list"></i> Faol Buyurtmalar</div></div>
     {% if orders %}
-    <table><thead><tr><th>Mijoz</th><th>Mashina</th><th>Xizmat</th><th>Narx</th><th>Holat</th><th>Amal</th></tr></thead><tbody>
-    {% for o in orders %}<tr>
+    <table><thead><tr><th>Mijoz</th><th>Mashina</th><th>Xizmat</th><th>Narx</th><th>Rol / Yordamchilar</th><th>Holat</th><th>Amal</th></tr></thead><tbody>
+    {% for o in orders %}<tr{% if o.is_helper %} class="row-helper"{% endif %}>
         <td><div class="user-cell"><div class="u-ava green">{{ o.customer.first_name|first|upper }}</div><div><div class="td-main">{{ o.customer.get_full_name|default:o.customer.email }}</div><div style="font-size:12px;color:var(--muted);">{{ o.customer.phone|default:"" }}</div></div></div></td>
         <td>{{ o.car }}</td>
         <td>{{ o.service_ad.get_service_type_display }}</td>
         <td style="color:var(--cyan);font-weight:700;">{{ o.total_price|floatformat:0 }} so'm</td>
+        <td>
+            {% if o.is_helper %}
+                <span class="role-badge role-helper" title="Siz bu buyurtmada yordamchi sifatida bog'langansiz">
+                    <i class="fa-solid fa-user-group"></i> Yordamchi
+                </span>
+                <div style="font-size:12px;color:var(--muted);margin-top:4px;">
+                    Asosiy: <strong>{{ o.worker.get_full_name|default:o.worker.email }}</strong>
+                </div>
+            {% else %}
+                <span class="role-badge role-primary"><i class="fa-solid fa-user-tie"></i> Asosiy</span>
+                <div style="font-size:12px;margin-top:6px;display:flex;flex-direction:column;gap:3px;">
+                    {% if o.helper_2 %}
+                    <span>
+                        <i class="fa-solid fa-user-plus" style="color:var(--cyan);"></i>
+                        2: {{ o.helper_2.get_full_name|default:o.helper_2.email }}
+                        <form method="post" action="{% url 'worker:remove_helper' o.pk 2 %}" style="display:inline;" onsubmit="return confirm('Yordamchini olib tashlash?');">
+                            {% csrf_token %}
+                            <button class="link-x" title="Olib tashlash"><i class="fa-solid fa-xmark"></i></button>
+                        </form>
+                    </span>
+                    {% endif %}
+                    {% if o.helper_3 %}
+                    <span>
+                        <i class="fa-solid fa-user-plus" style="color:var(--cyan);"></i>
+                        3: {{ o.helper_3.get_full_name|default:o.helper_3.email }}
+                        <form method="post" action="{% url 'worker:remove_helper' o.pk 3 %}" style="display:inline;" onsubmit="return confirm('Yordamchini olib tashlash?');">
+                            {% csrf_token %}
+                            <button class="link-x" title="Olib tashlash"><i class="fa-solid fa-xmark"></i></button>
+                        </form>
+                    </span>
+                    {% endif %}
+                    {% if not o.helper_2 or not o.helper_3 %}
+                    <form method="post" action="{% url 'worker:add_helper' o.pk %}" style="display:flex;gap:4px;margin-top:4px;">
+                        {% csrf_token %}
+                        <select name="helper_id" class="helper-select" required>
+                            <option value="">+ Yordamchi tanlash</option>
+                            {% for w in available_workers %}
+                                {% if w.id != o.helper_2_id and w.id != o.helper_3_id %}
+                                <option value="{{ w.id }}">{{ w.get_full_name|default:w.email }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <button class="btn btn-sm btn-cyan" title="Qo'shish"><i class="fa-solid fa-plus"></i></button>
+                    </form>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </td>
         <td><span class="badge badge-{{ o.status }}"><i class="fa-solid fa-circle fa-xs"></i> {{ o.get_status_display }}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
-            {% if o.status == 'pending' %}
-            <form method="post" action="{% url 'worker:accept_order' o.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i> Qabul</button></form>
-            <form method="post" action="{% url 'worker:reject_order' o.pk %}">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-xmark"></i> Rad</button></form>
-            {% elif o.status == 'accepted' %}
-              {% if o.can_be_completed %}
-              <form method="post" action="{% url 'worker:complete_order' o.pk %}" onsubmit="return confirmComplete(this)">{% csrf_token %}<button class="btn btn-primary btn-sm"><i class="fa-solid fa-flag-checkered"></i> Yakunlash</button></form>
-              {% else %}
-              <button class="btn btn-sm btn-wait" disabled title="Yakunlash uchun qabul qilinganidan beri kamida {{ o.required_work_minutes }} daqiqa o'tishi kerak ({% if o.is_heavy_wash %}yuk mashina{% else %}yengil mashina{% endif %})"><i class="fa-solid fa-clock"></i> Yana {{ o.minutes_left_to_complete }} daq</button>
-              {% endif %}
+            {% if o.is_helper %}
+                <span style="font-size:12px;color:var(--muted);"><i class="fa-solid fa-eye"></i> Faqat ko'rish</span>
+            {% else %}
+                {% if o.status == 'pending' %}
+                <form method="post" action="{% url 'worker:accept_order' o.pk %}">{% csrf_token %}<button class="btn btn-success btn-sm"><i class="fa-solid fa-check"></i> Qabul</button></form>
+                <form method="post" action="{% url 'worker:reject_order' o.pk %}">{% csrf_token %}<button class="btn btn-danger btn-sm"><i class="fa-solid fa-xmark"></i> Rad</button></form>
+                {% elif o.status == 'accepted' %}
+                  {% if o.can_be_completed %}
+                  <form method="post" action="{% url 'worker:complete_order' o.pk %}" onsubmit="return confirmComplete(this)">{% csrf_token %}<button class="btn btn-primary btn-sm"><i class="fa-solid fa-flag-checkered"></i> Yakunlash</button></form>
+                  {% else %}
+                  <button class="btn btn-sm btn-wait" disabled title="Yakunlash uchun qabul qilinganidan beri kamida {{ o.required_work_minutes }} daqiqa o'tishi kerak ({% if o.is_heavy_wash %}yuk mashina{% else %}yengil mashina{% endif %})"><i class="fa-solid fa-clock"></i> Yana {{ o.minutes_left_to_complete }} daq</button>
+                  {% endif %}
+                {% endif %}
             {% endif %}
         </td>
     </tr>{% endfor %}
@@ -37,6 +89,55 @@
     font-weight: 600;
 }
 .btn-wait i { margin-right: 4px; }
+
+.row-helper {
+    background: rgba(34,211,238,0.04);
+}
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+.role-primary {
+    background: rgba(34,197,94,0.14);
+    color: var(--green, #22c55e);
+    border: 1px solid rgba(34,197,94,0.4);
+}
+.role-helper {
+    background: rgba(34,211,238,0.14);
+    color: var(--cyan, #22d3ee);
+    border: 1px solid rgba(34,211,238,0.4);
+}
+.helper-select {
+    background: var(--bg-2, #0f172a);
+    color: var(--text, #e2e8f0);
+    border: 1px solid var(--border, #334155);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    max-width: 180px;
+}
+.btn-cyan {
+    background: rgba(34,211,238,0.16);
+    color: var(--cyan, #22d3ee);
+    border: 1px solid rgba(34,211,238,0.4);
+}
+.btn-cyan:hover {
+    background: rgba(34,211,238,0.28);
+}
+.link-x {
+    background: transparent;
+    border: none;
+    color: var(--danger, #ef4444);
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 11px;
+}
+.link-x:hover { opacity: 0.7; }
 </style>
 
 <script>

@@ -29,6 +29,22 @@ class Order(models.Model):
         limit_choices_to={'role': 'worker'},
         verbose_name=_('Ishchi')
     )
+    helper_2 = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='helper2_orders',
+        limit_choices_to={'role': 'worker'},
+        verbose_name=_('Yordamchi ishchi 2'),
+    )
+    helper_3 = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='helper3_orders',
+        limit_choices_to={'role': 'worker'},
+        verbose_name=_('Yordamchi ishchi 3'),
+    )
     car = models.ForeignKey(
         'customer.Car',
         on_delete=models.SET_NULL,

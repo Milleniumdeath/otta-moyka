@@ -4,10 +4,21 @@
 <div class="table-card">
     <div class="table-head"><div class="table-head-title"><i class="fa-solid fa-clock-rotate-left"></i> Barcha Buyurtmalar</div></div>
     {% if orders %}
-    <table><thead><tr><th>Mijoz</th><th>Xizmat</th><th>Baho</th><th>Holat</th><th>Sana</th></tr></thead><tbody>
-    {% for o in orders %}<tr>
+    <table><thead><tr><th>Mijoz</th><th>Xizmat</th><th>Rol</th><th>Baho</th><th>Holat</th><th>Sana</th></tr></thead><tbody>
+    {% for o in orders %}<tr{% if o.is_helper %} style="background:rgba(34,211,238,0.04);"{% endif %}>
         <td class="td-main">{{ o.customer.get_full_name|default:o.customer.email }}</td>
         <td>{{ o.service_ad.get_service_type_display }}</td>
+        <td>
+            {% if o.is_helper %}
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:600;background:rgba(34,211,238,0.14);color:var(--cyan,#22d3ee);border:1px solid rgba(34,211,238,0.4);" title="Asosiy: {{ o.worker.get_full_name|default:o.worker.email }}">
+                    <i class="fa-solid fa-user-group"></i> Yordamchi
+                </span>
+            {% else %}
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:600;background:rgba(34,197,94,0.14);color:var(--green,#22c55e);border:1px solid rgba(34,197,94,0.4);">
+                    <i class="fa-solid fa-user-tie"></i> Asosiy
+                </span>
+            {% endif %}
+        </td>
         <td>
             {% if o.review %}
                 <span style="color:var(--amber);">

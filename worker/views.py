@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.utils import timezone
 from core.models import Order, Bonus, LoyaltyToken
 from worker.models import ServiceAd
+from accounts.models import User
 from decimal import Decimal
 from .models import WorkSchedule
 from .forms import ServiceAdForm, WorkScheduleForm
@@ -200,11 +201,27 @@ def delete_ad(request, pk):
 
 @worker_required
 def orders(request):
-    orders_list = Order.objects.filter(
-        worker=request.user,
-        status__in=[Order.Status.PENDING, Order.Status.ACCEPTED, Order.Status.IN_PROGRESS]
-    ).select_related('customer','car','service_ad').order_by('-created_at')
-    return render(request, 'worker/orders.html', {'orders': orders_list})
+    involved = Q(worker=request.user) | Q(helper_2=request.user) | Q(helper_3=request.user)
+    orders_qs = Order.objects.filter(
+        involved,
+        status__in=[Order.Status.PENDING, Order.Status.ACCEPTED, Order.Status.IN_PROGRESS],
+    ).select_related('customer','car','service_ad','worker','helper_2','helper_3').order_by('-created_at')
+
+    # Yordamchi sifatida bog'langanlarni belgilab qo'yamiz
+    orders_list = []
+    for o in orders_qs:
+        o.is_helper = (o.worker_id != request.user.id)
+        orders_list.append(o)
+
+    # Asosiy ishchi sifatida yordamchi qo'shish uchun mavjud ishchilar ro'yxati
+    available_workers = User.objects.filter(
+        role='worker', is_approved=True
+    ).exclude(id=request.user.id).order_by('first_name', 'last_name')
+
+    return render(request, 'worker/orders.html', {
+        'orders': orders_list,
+        'available_workers': available_workers,
+    })
 
 
 @worker_required
@@ -260,11 +277,91 @@ def complete_order(request, pk):
 
 
 @worker_required
+def add_helper(request, pk):
+    """Asosiy ishchi buyurtmaga yordamchi qo'shadi (slot: 2 yoki 3)."""
+    if request.method != 'POST':
+        return redirect('worker:orders')
+
+    order = get_object_or_404(Order, pk=pk, worker=request.user)
+
+    if order.status in (Order.Status.COMPLETED, Order.Status.REJECTED, Order.Status.CANCELLED):
+        messages.error(request, "Yopilgan buyurtmaga yordamchi qo'shib bo'lmaydi.")
+        return redirect('worker:orders')
+
+    try:
+        helper_id = int(request.POST.get('helper_id', '0'))
+    except (TypeError, ValueError):
+        helper_id = 0
+
+    if not helper_id:
+        messages.error(request, "Ishchini tanlang.")
+        return redirect('worker:orders')
+
+    if helper_id == request.user.id:
+        messages.error(request, "O'zingizni yordamchi qilib qo'sha olmaysiz.")
+        return redirect('worker:orders')
+
+    if helper_id in (order.helper_2_id, order.helper_3_id):
+        messages.warning(request, "Bu ishchi allaqachon yordamchi sifatida qo'shilgan.")
+        return redirect('worker:orders')
+
+    helper = User.objects.filter(id=helper_id, role='worker', is_approved=True).first()
+    if not helper:
+        messages.error(request, "Ishchi topilmadi.")
+        return redirect('worker:orders')
+
+    # Bo'sh slotni topamiz: avval helper_2, keyin helper_3
+    if not order.helper_2_id:
+        order.helper_2 = helper
+        slot = 2
+    elif not order.helper_3_id:
+        order.helper_3 = helper
+        slot = 3
+    else:
+        messages.warning(request, "Bu buyurtmada yordamchi joylari to'lgan (2 ta).")
+        return redirect('worker:orders')
+
+    order.save(update_fields=['helper_2' if slot == 2 else 'helper_3', 'updated_at'])
+    messages.success(request, f"{helper.get_full_name() or helper.email} yordamchi sifatida qo'shildi.")
+    return redirect('worker:orders')
+
+
+@worker_required
+def remove_helper(request, pk, slot):
+    """Asosiy ishchi yordamchini olib tashlaydi."""
+    if request.method != 'POST':
+        return redirect('worker:orders')
+
+    if slot not in (2, 3):
+        messages.error(request, "Noto'g'ri yordamchi o'rni.")
+        return redirect('worker:orders')
+
+    order = get_object_or_404(Order, pk=pk, worker=request.user)
+
+    field = f'helper_{slot}'
+    if not getattr(order, f'{field}_id'):
+        messages.warning(request, "Bu o'rinda yordamchi yo'q edi.")
+        return redirect('worker:orders')
+
+    setattr(order, field, None)
+    order.save(update_fields=[field, 'updated_at'])
+    messages.info(request, "Yordamchi olib tashlandi.")
+    return redirect('worker:orders')
+
+
+@worker_required
 def order_history(request):
-    orders_list = Order.objects.filter(
-        worker=request.user,
-        status__in=[Order.Status.COMPLETED, Order.Status.REJECTED, Order.Status.CANCELLED]
-    ).select_related('customer','car','service_ad').prefetch_related('review').order_by('-created_at')
+    involved = Q(worker=request.user) | Q(helper_2=request.user) | Q(helper_3=request.user)
+    orders_qs = Order.objects.filter(
+        involved,
+        status__in=[Order.Status.COMPLETED, Order.Status.REJECTED, Order.Status.CANCELLED],
+    ).select_related('customer','car','service_ad','worker','helper_2','helper_3').prefetch_related('review').order_by('-created_at')
+
+    orders_list = []
+    for o in orders_qs:
+        o.is_helper = (o.worker_id != request.user.id)
+        orders_list.append(o)
+
     return render(request, 'worker/order_history.html', {'orders': orders_list})
 
 
