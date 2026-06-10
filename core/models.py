@@ -458,6 +458,100 @@ class Receipt(models.Model):
         if ids:
             cls.objects.filter(id__in=ids).delete()
 
+
+class ChemicalRecipe(models.Model):
+    """Moyka egasi tomonidan AI yordamida yaratilgan kimyoviy formula."""
+
+    class Category(models.TextChoices):
+        SHAMPOO   = 'shampoo',   _('Shampun (Yuvish)')
+        FOAM      = 'foam',      _('Faol ko\'pik')
+        WAX       = 'wax',       _('Mum / Wax')
+        POLISH    = 'polish',    _('Polirovka')
+        INTERIOR  = 'interior',  _('Salon tozalovchi')
+        GLASS     = 'glass',     _('Shisha tozalovchi')
+        TIRE      = 'tire',      _('Shina/g\'ildirak parlatuvchi')
+        DEGREASER = 'degreaser', _('Yog\' ketkazuvchi')
+        PLASTIC   = 'plastic',   _('Plastik/rezina tiklovchi')
+        DISINFECT = 'disinfect', _('Dezinfeksiyalovchi')
+        OTHER     = 'other',     _('Boshqa')
+
+    CATEGORY_ICONS = {
+        'shampoo':   'fa-soap',
+        'foam':      'fa-bubbles',
+        'wax':       'fa-droplet',
+        'polish':    'fa-wand-magic-sparkles',
+        'interior':  'fa-couch',
+        'glass':     'fa-glass-water',
+        'tire':      'fa-circle-dot',
+        'degreaser': 'fa-oil-can',
+        'plastic':   'fa-cubes-stacked',
+        'disinfect': 'fa-spray-can',
+        'other':     'fa-flask',
+    }
+
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE,
+        related_name='chemical_recipes',
+        verbose_name=_('Egasi'),
+    )
+    name = models.CharField(
+        max_length=120,
+        verbose_name=_('Formula nomi'),
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=Category.choices,
+        default=Category.SHAMPOO,
+        verbose_name=_('Turi'),
+    )
+    purpose = models.TextField(
+        verbose_name=_('Maqsad / vazifa'),
+        help_text=_("Foydalanuvchi qanday natija kutgan"),
+    )
+    yield_volume = models.CharField(
+        max_length=50, blank=True,
+        verbose_name=_("Hosil hajmi"),
+        help_text=_("Masalan, 10 litr tayyor mahsulot"),
+    )
+    ingredients = models.TextField(
+        verbose_name=_('Tarkib'),
+        help_text=_("Komponentlar va miqdori"),
+    )
+    instructions = models.TextField(
+        verbose_name=_("Tayyorlash bosqichlari"),
+    )
+    safety_notes = models.TextField(
+        blank=True,
+        verbose_name=_("Xavfsizlik eslatmalari"),
+    )
+    usage_notes = models.TextField(
+        blank=True,
+        verbose_name=_("Qo'llash bo'yicha tavsiyalar"),
+    )
+    ai_model = models.CharField(
+        max_length=60, blank=True,
+        verbose_name=_("Foydalanilgan AI model"),
+    )
+    is_favorite = models.BooleanField(
+        default=False,
+        verbose_name=_("Sevimli"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _('Kimyoviy formula')
+        verbose_name_plural = _('Kimyoviy formulalar')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
+    @property
+    def icon(self):
+        return self.CATEGORY_ICONS.get(self.category, 'fa-flask')
+
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 

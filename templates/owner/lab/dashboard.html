@@ -1,0 +1,564 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}Laboratoriya{% endblock %}
+{% block page_title %}Laboratoriya{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+<style>
+.lab-hero {
+    background: linear-gradient(135deg, rgba(15,143,152,0.18), rgba(84,131,179,0.12));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 22px;
+    display: flex; align-items: center; gap: 20px;
+    backdrop-filter: blur(16px);
+    position: relative; overflow: hidden;
+}
+.lab-hero::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(circle at 90% 20%, rgba(0,200,255,0.18), transparent 50%);
+}
+.lab-hero-icon {
+    width: 72px; height: 72px; border-radius: 22px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; color: #fff; flex-shrink: 0;
+    box-shadow: 0 12px 32px rgba(0,200,255,0.28);
+}
+.lab-hero-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.lab-hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px; letter-spacing: 1.5px; color: var(--text);
+}
+.lab-hero-sub {
+    font-size: 14px; color: var(--soft); margin-top: 4px; line-height: 1.5;
+}
+.lab-hero-stat {
+    display: flex; gap: 14px; margin-top: 12px;
+}
+.lab-hero-stat span {
+    font-size: 12px; color: var(--muted);
+    display: inline-flex; align-items: center; gap: 5px;
+}
+.lab-hero-stat strong { color: var(--accent2); font-weight: 800; font-size: 14px; }
+
+.lab-section {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 22px;
+    backdrop-filter: blur(16px);
+}
+.lab-section-title {
+    font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px;
+}
+.lab-section-title i { color: var(--accent2); }
+
+.cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px; margin-bottom: 18px;
+}
+.cat-btn {
+    background: var(--glass2);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 12px;
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    text-align: center;
+    color: var(--soft);
+    font-size: 12px; font-weight: 600;
+    transition: all 0.2s;
+}
+.cat-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+.cat-btn.selected {
+    border-color: var(--accent2);
+    background: rgba(15,143,152,0.14);
+    color: var(--accent2);
+    box-shadow: 0 0 0 3px rgba(15,143,152,0.18);
+}
+.cat-btn i { font-size: 22px; }
+
+.gen-form .form-group { margin-bottom: 14px; }
+
+.gen-actions {
+    display: flex; gap: 10px; flex-wrap: wrap;
+}
+
+.gen-result {
+    margin-top: 18px;
+    background: rgba(0,200,255,0.04);
+    border: 1px dashed rgba(0,200,255,0.32);
+    border-radius: 16px;
+    padding: 20px;
+    display: none;
+}
+.gen-result.show { display: block; }
+.gen-result h3 {
+    font-size: 18px; font-weight: 700; margin-bottom: 4px;
+    color: var(--text);
+}
+.gen-result .yield {
+    font-size: 13px; color: var(--accent2);
+    margin-bottom: 16px; font-weight: 600;
+}
+.gen-block { margin-top: 16px; }
+.gen-block-title {
+    font-size: 11px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+}
+.gen-block-title i { color: var(--accent2); }
+.ing-list { display: flex; flex-direction: column; gap: 8px; }
+.ing-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 12px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px;
+}
+.ing-row-name { flex: 1; font-weight: 600; color: var(--text); }
+.ing-row-amount {
+    font-family: monospace;
+    color: var(--accent2);
+    font-weight: 700;
+    white-space: nowrap;
+}
+.ing-row-role {
+    width: 100%; font-size: 11px; color: var(--muted);
+    margin-top: 3px;
+}
+.step-list, .note-list {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 8px;
+}
+.step-list li, .note-list li {
+    padding: 9px 12px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 13px; line-height: 1.55;
+    color: var(--text);
+}
+.note-list.warn li {
+    background: rgba(245,158,11,0.06);
+    border-color: rgba(245,158,11,0.3);
+    color: #f59e0b;
+}
+
+.recipes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px;
+}
+.recipe-card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    transition: all 0.2s;
+    backdrop-filter: blur(14px);
+    position: relative;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+.recipe-card:hover {
+    border-color: var(--accent2);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 32px var(--shadow);
+}
+.recipe-card-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: rgba(15,143,152,0.12);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: var(--accent2);
+    margin-bottom: 12px;
+}
+.recipe-card.fav .recipe-card-icon {
+    background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1));
+    color: #f59e0b; border-color: rgba(245,158,11,0.4);
+}
+.recipe-card-cat {
+    font-size: 10px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+.recipe-card-name {
+    font-size: 15px; font-weight: 700;
+    color: var(--text); margin-bottom: 6px;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+}
+.recipe-card-purpose {
+    font-size: 12px; color: var(--soft); line-height: 1.45;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical; overflow: hidden;
+}
+.recipe-card-date {
+    font-size: 11px; color: var(--muted);
+    margin-top: 10px;
+}
+.recipe-fav-star {
+    position: absolute; top: 14px; right: 14px;
+    color: #f59e0b; font-size: 14px;
+}
+
+.filter-chips {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.filter-chip {
+    background: var(--glass2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px; font-weight: 600;
+    color: var(--soft);
+    text-decoration: none;
+    transition: all 0.2s;
+}
+.filter-chip:hover { border-color: var(--accent2); color: var(--accent2); }
+.filter-chip.active {
+    background: var(--accent2); color: #fff;
+    border-color: var(--accent2);
+}
+
+.loading-overlay {
+    display: none; align-items: center; justify-content: center;
+    gap: 12px; padding: 20px;
+    color: var(--accent2); font-weight: 600;
+}
+.loading-overlay.show { display: flex; }
+.loading-overlay i { animation: spin 1.2s linear infinite; font-size: 22px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<!-- HERO -->
+<div class="lab-hero">
+    <div class="lab-hero-icon"><i class="fa-solid fa-flask-vial"></i></div>
+    <div class="lab-hero-body">
+        <div class="lab-hero-title">Kimyoviy Laboratoriya</div>
+        <div class="lab-hero-sub">
+            Sun'iy intellekt yordamida mashinangiz uchun maxsus kimyoviy aralashmalarni ishlab chiqing — shampun, mum, polirovka, ko'pik va boshqalar.
+        </div>
+        <div class="lab-hero-stat">
+            <span><i class="fa-solid fa-vial"></i> Jami formulalar: <strong>{{ total_count }}</strong></span>
+        </div>
+    </div>
+</div>
+
+<!-- YANGI FORMULA YARATISH -->
+<div class="lab-section">
+    <div class="lab-section-title">
+        <i class="fa-solid fa-wand-magic-sparkles"></i> Yangi formula yaratish
+    </div>
+
+    <div class="gen-form">
+        <!-- KATEGORIYA -->
+        <label class="form-label">1. Mahsulot turini tanlang</label>
+        <div class="cat-grid">
+            {% for value, label in categories %}
+            <button type="button" class="cat-btn" data-cat="{{ value }}">
+                <i class="fa-solid {{ category_icons|default_if_none:'fa-flask' }}{% if category_icons %} {{ category_icons.value }}{% endif %}"></i>
+                <span>{{ label }}</span>
+            </button>
+            {% endfor %}
+        </div>
+
+        <!-- MAQSAD -->
+        <div class="form-group">
+            <label class="form-label">2. Maqsad / vazifa (batafsil yozing)</label>
+            <textarea id="genPurpose" class="form-control" rows="3"
+                      placeholder="Masalan: Yengil avtomobil tashqi yuvish uchun ko'p ko'pikli, mashina rangiga zarar bermaydigan, suvni tez chiqaradigan kontsentratsiyali shampun."
+                      maxlength="1500"></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">3. Tayyor hosil hajmi (ixtiyoriy)</label>
+                <input type="text" id="genYield" class="form-control"
+                       placeholder="Masalan: 10 litr" maxlength="50">
+            </div>
+            <div class="form-group">
+                <label class="form-label">4. Qo'shimcha shartlar (ixtiyoriy)</label>
+                <input type="text" id="genConstraints" class="form-control"
+                       placeholder="pH neytral, hidsiz, eko-friendly..." maxlength="200">
+            </div>
+        </div>
+
+        <div class="gen-actions">
+            <button type="button" id="genBtn" class="btn btn-primary">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> AI bilan yaratish
+            </button>
+            <button type="button" id="resetBtn" class="btn btn-ghost">
+                <i class="fa-solid fa-rotate-left"></i> Tozalash
+            </button>
+        </div>
+
+        <div class="loading-overlay" id="genLoading">
+            <i class="fa-solid fa-flask-vial"></i>
+            AI laboratoriyada formula tayyorlanmoqda...
+        </div>
+    </div>
+
+    <!-- NATIJA -->
+    <div class="gen-result" id="genResult">
+        <h3 id="resName"></h3>
+        <div class="yield" id="resYield"></div>
+
+        <div class="gen-block">
+            <div class="gen-block-title"><i class="fa-solid fa-list-check"></i> Tarkib</div>
+            <div class="ing-list" id="resIngredients"></div>
+        </div>
+
+        <div class="gen-block">
+            <div class="gen-block-title"><i class="fa-solid fa-flask"></i> Tayyorlash bosqichlari</div>
+            <ol class="step-list" id="resInstructions"></ol>
+        </div>
+
+        <div class="gen-block">
+            <div class="gen-block-title"><i class="fa-solid fa-triangle-exclamation"></i> Xavfsizlik</div>
+            <ul class="note-list warn" id="resSafety"></ul>
+        </div>
+
+        <div class="gen-block">
+            <div class="gen-block-title"><i class="fa-solid fa-circle-info"></i> Qo'llash bo'yicha tavsiyalar</div>
+            <ul class="note-list" id="resUsage"></ul>
+        </div>
+
+        <form method="post" action="{% url 'owner:lab_save' %}" id="saveForm" style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;">
+            {% csrf_token %}
+            <input type="hidden" name="name" id="saveName">
+            <input type="hidden" name="category" id="saveCategory">
+            <input type="hidden" name="purpose" id="savePurpose">
+            <input type="hidden" name="yield_volume" id="saveYield">
+            <input type="hidden" name="ingredients" id="saveIngredients">
+            <input type="hidden" name="instructions" id="saveInstructions">
+            <input type="hidden" name="safety_notes" id="saveSafety">
+            <input type="hidden" name="usage_notes" id="saveUsage">
+            <input type="hidden" name="ai_model" id="saveAiModel">
+            <button type="submit" class="btn btn-success">
+                <i class="fa-solid fa-floppy-disk"></i> Saqlash
+            </button>
+            <button type="button" class="btn btn-ghost" id="regenBtn">
+                <i class="fa-solid fa-arrows-rotate"></i> Qaytadan yaratish
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- SAQLANGAN FORMULALAR -->
+<div class="lab-section">
+    <div class="lab-section-title">
+        <i class="fa-solid fa-archive"></i> Saqlangan formulalar
+    </div>
+
+    <div class="filter-chips">
+        <a href="{% url 'owner:lab_dashboard' %}" class="filter-chip {% if not category_filter %}active{% endif %}">
+            <i class="fa-solid fa-list"></i> Hammasi
+        </a>
+        {% for value, label in categories %}
+        <a href="?cat={{ value }}" class="filter-chip {% if category_filter == value %}active{% endif %}">
+            {{ label }}
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if recipes %}
+    <div class="recipes-grid">
+        {% for r in recipes %}
+        <a href="{% url 'owner:lab_detail' r.pk %}" class="recipe-card {% if r.is_favorite %}fav{% endif %}">
+            {% if r.is_favorite %}<i class="fa-solid fa-star recipe-fav-star"></i>{% endif %}
+            <div class="recipe-card-icon"><i class="fa-solid {{ r.icon }}"></i></div>
+            <div class="recipe-card-cat">{{ r.get_category_display }}</div>
+            <div class="recipe-card-name">{{ r.name }}</div>
+            <div class="recipe-card-purpose">{{ r.purpose|truncatechars:90 }}</div>
+            <div class="recipe-card-date">
+                <i class="fa-regular fa-clock fa-xs"></i> {{ r.created_at|date:"d.m.Y H:i" }}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon"><i class="fa-solid fa-flask"></i></div>
+        <p>Hali formulalar yaratilmagan. Yuqoridagi shaklda birinchi formulani yarating.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const CATEGORY_ICONS = {
+    'shampoo':   'fa-soap',
+    'foam':      'fa-bubbles',
+    'wax':       'fa-droplet',
+    'polish':    'fa-wand-magic-sparkles',
+    'interior':  'fa-couch',
+    'glass':     'fa-glass-water',
+    'tire':      'fa-circle-dot',
+    'degreaser': 'fa-oil-can',
+    'plastic':   'fa-cubes-stacked',
+    'disinfect': 'fa-spray-can',
+    'other':     'fa-flask'
+};
+
+// Kategoriya ikonkasini to'g'ri qo'yish (Django template'da murakkab edi)
+document.querySelectorAll('.cat-btn').forEach(b => {
+    const cat = b.dataset.cat;
+    const icon = b.querySelector('i');
+    if (icon && CATEGORY_ICONS[cat]) {
+        icon.className = 'fa-solid ' + CATEGORY_ICONS[cat];
+    }
+});
+
+let selectedCat = '';
+let lastRecipe = null;
+
+document.querySelectorAll('.cat-btn').forEach(b => {
+    b.addEventListener('click', () => {
+        document.querySelectorAll('.cat-btn').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+        selectedCat = b.dataset.cat;
+    });
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+    selectedCat = '';
+    document.querySelectorAll('.cat-btn').forEach(x => x.classList.remove('selected'));
+    document.getElementById('genPurpose').value = '';
+    document.getElementById('genYield').value = '';
+    document.getElementById('genConstraints').value = '';
+    document.getElementById('genResult').classList.remove('show');
+    lastRecipe = null;
+});
+
+async function generate() {
+    const purpose = document.getElementById('genPurpose').value.trim();
+    if (!selectedCat) {
+        alert("Avval mahsulot turini tanlang.");
+        return;
+    }
+    if (purpose.length < 10) {
+        alert("Maqsadni batafsilroq yozing (kamida 10 belgi).");
+        return;
+    }
+
+    const yieldVolume = document.getElementById('genYield').value.trim();
+    const constraints = document.getElementById('genConstraints').value.trim();
+
+    const loading = document.getElementById('genLoading');
+    const result = document.getElementById('genResult');
+    const btn = document.getElementById('genBtn');
+
+    loading.classList.add('show');
+    result.classList.remove('show');
+    btn.disabled = true;
+
+    try {
+        const r = await fetch('/api/lab-generate/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf()
+            },
+            body: JSON.stringify({
+                category: selectedCat,
+                purpose: purpose,
+                yield_volume: yieldVolume,
+                constraints: constraints
+            })
+        });
+        const d = await r.json();
+        if (!r.ok) {
+            alert(d.error || "Xatolik yuz berdi.");
+            return;
+        }
+        renderRecipe(d.recipe, d.category, d.ai_model);
+        lastRecipe = d.recipe;
+    } catch(e) {
+        alert("Internet aloqasida muammo. Qaytadan urinib ko'ring.");
+    } finally {
+        loading.classList.remove('show');
+        btn.disabled = false;
+    }
+}
+
+function renderRecipe(recipe, category, aiModel) {
+    document.getElementById('resName').textContent = recipe.name || 'Nomsiz formula';
+    document.getElementById('resYield').textContent =
+        recipe.yield_volume ? ('Hosil: ' + recipe.yield_volume) : '';
+
+    const ing = document.getElementById('resIngredients');
+    ing.innerHTML = '';
+    (recipe.ingredients || []).forEach(it => {
+        const row = document.createElement('div');
+        row.className = 'ing-row';
+        row.innerHTML = `
+            <div class="ing-row-name">
+                ${esc(it.name || '')}
+                ${it.role ? `<div class="ing-row-role">${esc(it.role)}</div>` : ''}
+            </div>
+            <div class="ing-row-amount">${esc(it.amount || '')}</div>
+        `;
+        ing.appendChild(row);
+    });
+
+    const steps = document.getElementById('resInstructions');
+    steps.innerHTML = '';
+    (recipe.instructions || []).forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = s;
+        steps.appendChild(li);
+    });
+
+    const safety = document.getElementById('resSafety');
+    safety.innerHTML = '';
+    (recipe.safety_notes || []).forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = s;
+        safety.appendChild(li);
+    });
+
+    const usage = document.getElementById('resUsage');
+    usage.innerHTML = '';
+    (recipe.usage_notes || []).forEach(s => {
+        const li = document.createElement('li');
+        li.textContent = s;
+        usage.appendChild(li);
+    });
+
+    // Saqlash uchun hidden field'larni to'ldiramiz
+    document.getElementById('saveName').value = recipe.name || 'Yangi formula';
+    document.getElementById('saveCategory').value = category;
+    document.getElementById('savePurpose').value = document.getElementById('genPurpose').value.trim();
+    document.getElementById('saveYield').value = recipe.yield_volume || '';
+    document.getElementById('saveIngredients').value = JSON.stringify(recipe.ingredients || []);
+    document.getElementById('saveInstructions').value = JSON.stringify(recipe.instructions || []);
+    document.getElementById('saveSafety').value = JSON.stringify(recipe.safety_notes || []);
+    document.getElementById('saveUsage').value = JSON.stringify(recipe.usage_notes || []);
+    document.getElementById('saveAiModel').value = aiModel || '';
+
+    document.getElementById('genResult').classList.add('show');
+    document.getElementById('genResult').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+}
+
+document.getElementById('genBtn').addEventListener('click', generate);
+document.getElementById('regenBtn').addEventListener('click', generate);
+</script>
+{% endblock %}

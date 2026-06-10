@@ -1,0 +1,210 @@
+{% extends 'base/panel_base.html' %}
+{% block title %}{{ recipe.name }}{% endblock %}
+{% block page_title %}Formula tafsiloti{% endblock %}
+{% block sidebar_nav %}{% include 'owner/_sidebar.html' %}{% endblock %}
+
+{% block content %}
+<style>
+.detail-hero {
+    background: linear-gradient(135deg, rgba(15,143,152,0.18), rgba(84,131,179,0.12));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 20px;
+    backdrop-filter: blur(16px);
+    position: relative; overflow: hidden;
+}
+.detail-hero-icon {
+    width: 78px; height: 78px; border-radius: 22px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; color: #fff; flex-shrink: 0;
+    box-shadow: 0 12px 32px rgba(0,200,255,0.28);
+}
+.detail-hero-body { flex: 1; min-width: 0; }
+.detail-hero-cat {
+    font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--accent2);
+    margin-bottom: 6px;
+}
+.detail-hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 30px; letter-spacing: 1.2px; color: var(--text);
+    line-height: 1.1; margin-bottom: 6px;
+}
+.detail-hero-yield {
+    font-size: 14px; color: var(--soft); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--glass);
+    padding: 6px 12px; border-radius: 18px;
+    border: 1px solid var(--border);
+}
+.detail-hero-yield i { color: var(--accent2); }
+.detail-actions {
+    display: flex; gap: 10px; flex-wrap: wrap;
+}
+
+.detail-card {
+    background: var(--glass);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 18px;
+    backdrop-filter: blur(14px);
+}
+.detail-card-title {
+    font-size: 15px; font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px;
+}
+.detail-card-title i { color: var(--accent2); }
+.detail-card-title.warn i { color: #f59e0b; }
+.detail-card.warn {
+    background: rgba(245,158,11,0.06);
+    border-color: rgba(245,158,11,0.3);
+}
+
+.content-pre {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px; line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap; word-break: break-word;
+    background: var(--glass2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+.content-pre.warn {
+    background: rgba(245,158,11,0.05);
+    border-color: rgba(245,158,11,0.25);
+    color: #f59e0b;
+}
+
+.meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+.meta-item {
+    background: var(--glass2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+.meta-label {
+    font-size: 10px; color: var(--muted); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+.meta-value { font-size: 13px; color: var(--text); font-weight: 600; }
+
+@media print {
+    .detail-actions, .nav-item, .sidebar, .bottom-nav, .topbar, .ai-fab {
+        display: none !important;
+    }
+    .main { margin-left: 0 !important; }
+}
+</style>
+
+<div class="detail-hero">
+    <div class="detail-hero-icon"><i class="fa-solid {{ recipe.icon }}"></i></div>
+    <div class="detail-hero-body">
+        <div class="detail-hero-cat">{{ recipe.get_category_display }}</div>
+        <div class="detail-hero-title">{{ recipe.name }}</div>
+        {% if recipe.yield_volume %}
+        <span class="detail-hero-yield">
+            <i class="fa-solid fa-vial"></i> Hosil: {{ recipe.yield_volume }}
+        </span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-actions" style="margin-bottom:20px;">
+    <a href="{% url 'owner:lab_dashboard' %}" class="btn btn-ghost">
+        <i class="fa-solid fa-arrow-left"></i> Orqaga
+    </a>
+    <form method="post" action="{% url 'owner:lab_favorite' recipe.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button class="btn {% if recipe.is_favorite %}btn-success{% else %}btn-ghost{% endif %}">
+            <i class="fa-{% if recipe.is_favorite %}solid{% else %}regular{% endif %} fa-star"></i>
+            {% if recipe.is_favorite %}Sevimlidan olib tashlash{% else %}Sevimlilarga qo'shish{% endif %}
+        </button>
+    </form>
+    <button class="btn btn-ghost" onclick="window.print()">
+        <i class="fa-solid fa-print"></i> Chop etish
+    </button>
+    <form method="post" action="{% url 'owner:lab_delete' recipe.pk %}" style="display:inline;"
+          onsubmit="return confirm('«{{ recipe.name|escapejs }}» formulasini o\'chirishni tasdiqlaysizmi?');">
+        {% csrf_token %}
+        <button class="btn btn-danger">
+            <i class="fa-solid fa-trash"></i> O'chirish
+        </button>
+    </form>
+</div>
+
+<div class="meta-grid">
+    <div class="meta-item">
+        <div class="meta-label">Yaratilgan</div>
+        <div class="meta-value">{{ recipe.created_at|date:"d.m.Y H:i" }}</div>
+    </div>
+    {% if recipe.updated_at and recipe.updated_at != recipe.created_at %}
+    <div class="meta-item">
+        <div class="meta-label">O'zgartirilgan</div>
+        <div class="meta-value">{{ recipe.updated_at|date:"d.m.Y H:i" }}</div>
+    </div>
+    {% endif %}
+    {% if recipe.ai_model %}
+    <div class="meta-item">
+        <div class="meta-label">AI model</div>
+        <div class="meta-value">{{ recipe.ai_model }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="detail-card">
+    <div class="detail-card-title">
+        <i class="fa-solid fa-bullseye"></i> Maqsad
+    </div>
+    <div class="content-pre">{{ recipe.purpose }}</div>
+</div>
+
+<div class="detail-card">
+    <div class="detail-card-title">
+        <i class="fa-solid fa-list-check"></i> Tarkib
+    </div>
+    <div class="content-pre">{{ recipe.ingredients }}</div>
+</div>
+
+<div class="detail-card">
+    <div class="detail-card-title">
+        <i class="fa-solid fa-flask"></i> Tayyorlash bosqichlari
+    </div>
+    <div class="content-pre">{{ recipe.instructions }}</div>
+</div>
+
+{% if recipe.safety_notes %}
+<div class="detail-card warn">
+    <div class="detail-card-title warn">
+        <i class="fa-solid fa-triangle-exclamation"></i> Xavfsizlik eslatmalari
+    </div>
+    <div class="content-pre warn">{{ recipe.safety_notes }}</div>
+</div>
+{% endif %}
+
+{% if recipe.usage_notes %}
+<div class="detail-card">
+    <div class="detail-card-title">
+        <i class="fa-solid fa-circle-info"></i> Qo'llash bo'yicha tavsiyalar
+    </div>
+    <div class="content-pre">{{ recipe.usage_notes }}</div>
+</div>
+{% endif %}
+
+<div style="font-size:11px;color:var(--muted);margin-top:20px;text-align:center;line-height:1.5;">
+    <i class="fa-solid fa-info-circle"></i>
+    Bu formula AI tomonidan yaratilgan. Tayyorlashdan oldin tegishli xavfsizlik qoidalariga rioya qiling
+    va kimyoviy moddalarning to'g'riligini mutaxassis bilan tekshiring.
+</div>
+{% endblock %}

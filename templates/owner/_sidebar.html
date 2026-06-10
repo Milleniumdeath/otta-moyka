@@ -20,6 +20,9 @@
 <a href="{% url 'owner:reports' %}" class="nav-item {% if 'report' in request.resolver_match.url_name %}active{% endif %}">
     <i class="fa-solid fa-chart-pie"></i> Statistika & Hisobot
 </a>
+<a href="{% url 'owner:lab_dashboard' %}" class="nav-item {% if 'lab' in request.resolver_match.url_name %}active{% endif %}">
+    <i class="fa-solid fa-flask"></i> Laboratoriya
+</a>
 <a href="{% url 'owner:cameras' %}" class="nav-item {% if request.resolver_match.url_name == 'cameras' %}active{% endif %}">
     <i class="fa-solid fa-video"></i> Kameralar
 </a>

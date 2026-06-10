@@ -10,6 +10,13 @@ urlpatterns = [
     path('dashboard/',              views.dashboard,        name='dashboard'),
     path('orders/history/',         views.order_history,    name='order_history'),
     path('receipts/<int:pk>/',      views.receipt_detail,   name='receipt_detail'),
+
+    # Laboratoriya — AI kimyoviy formulalar
+    path('lab/',                    views.lab_dashboard,    name='lab_dashboard'),
+    path('lab/save/',               views.lab_save,         name='lab_save'),
+    path('lab/<int:pk>/',           views.lab_detail,       name='lab_detail'),
+    path('lab/<int:pk>/delete/',    views.lab_delete,       name='lab_delete'),
+    path('lab/<int:pk>/fav/',       views.lab_favorite,     name='lab_favorite'),
     path('workers/',                views.workers,          name='workers'),
     path('workers/approve/<int:pk>/', views.approve_worker, name='approve_worker'),
     path('workers/delete/<int:pk>/',  views.delete_worker,  name='delete_worker'),

@@ -369,3 +369,182 @@ def ai_chat(request):
     else:
         msg = "AI xizmatida xatolik yuz berdi. Keyinroq urinib ko'ring."
     return JsonResponse({'error': msg}, status=502)
+
+
+# ════════════════════════════════════════════════════════════════
+# LABORATORIYA — Kimyoviy formula generatsiyasi (Moyka egasi uchun)
+# ════════════════════════════════════════════════════════════════
+
+LAB_SYSTEM_PROMPT = (
+    "Sen tajribali kimyogarsan va avto-yuvish (carwash) detailing sanoati "
+    "uchun professional kimyoviy aralashmalarni ishlab chiqasan. "
+    "Vazifang — moyka egasiga maxsus mahsulot tayyorlash uchun aniq formula "
+    "berish.\n\n"
+    "MUHIM QOIDALAR:\n"
+    "1. Faqat o'zbek tilida javob qaytar.\n"
+    "2. Faqat JSON formatda javob ber, JSON'dan tashqari matn yozma.\n"
+    "3. Komponentlarni umumiy, sotuvga mavjud kimyoviy moddalar nomi bilan ber "
+    "(masalan: \"natriy lauril sulfat (SLS)\", \"izopropil spirti\", \"distillangan suv\").\n"
+    "4. Miqdorlarni aniq son va o'lchov birligi bilan ber (gramm, litr, ml, %).\n"
+    "5. Foiz nisbati JAMI 100% bo'lishi shart bo'lgan formulalarda buni tekshir.\n"
+    "6. Xavfsizlik bo'limida MUHIM ogohlantirishlarni keltir: qo'lqop, niqob, "
+    "ventilyatsiya, aralashtirish tartibi (xavfli reaksiyalarni oldini olish), "
+    "saqlash va bolalardan uzoq tutish.\n"
+    "7. Tayyorlash bosqichlarini raqamlangan ko'rinishda, ketma-ket ber.\n"
+    "8. Agar foydalanuvchi xohishi tijoriy/o'q-otish/zaharli mahsulot bo'lsa, "
+    "rad et va sababini tushuntir (xavfsizlik bo'limida).\n\n"
+    "JSON FORMAT (qat'iy):\n"
+    "{\n"
+    '  "name": "Formula nomi (qisqa, 3-6 so\'z)",\n'
+    '  "yield_volume": "Tayyor mahsulot hajmi, masalan 5 litr",\n'
+    '  "ingredients": [\n'
+    '    {"name": "Komponent nomi", "amount": "Miqdor", "role": "Vazifasi"}\n'
+    '  ],\n'
+    '  "instructions": ["1. Birinchi bosqich...", "2. Ikkinchi bosqich..."],\n'
+    '  "safety_notes": ["Xavfsizlik 1", "Xavfsizlik 2"],\n'
+    '  "usage_notes": ["Qo\'llash maslahati 1", "..."]\n'
+    "}"
+)
+
+CATEGORY_LABELS = {
+    'shampoo':   "avtomobil tashqi yuvish shampuni",
+    'foam':      "avtomobil uchun faol ko'pik (foam shampoo)",
+    'wax':       "avtomobil mumi (wax / sealant)",
+    'polish':    "avtomobil polirovka pastasi",
+    'interior':  "avtomobil saloni tozalovchi",
+    'glass':     "avtomobil shisha tozalovchi",
+    'tire':      "avtomobil shinasi/rezina parlatuvchi",
+    'degreaser': "avtomobil dvigatel/yog' ketkazuvchi (degreaser)",
+    'plastic':   "plastik va rezinani tiklovchi",
+    'disinfect': "salon uchun dezinfeksiyalovchi vosita",
+    'other':     "avto-detailing kimyoviy aralashmasi",
+}
+
+
+def _parse_lab_response(text: str):
+    """AI javobidan JSON'ni ajratib oladi (markdown bloklarda yashirilgan bo'lsa ham)."""
+    import re
+    text = text.strip()
+    # ```json ... ``` blokini olib tashlash
+    m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if m:
+        text = m.group(1)
+    # Boshlanmasdan ortiqcha matn bo'lsa, birinchi { dan boshlaymiz
+    start = text.find('{')
+    end = text.rfind('}')
+    if start >= 0 and end > start:
+        text = text[start:end + 1]
+    return json.loads(text)
+
+
+@login_required
+@require_POST
+def lab_generate(request):
+    """Owner uchun: AI yordamida kimyoviy aralashma formulasini generatsiya qiladi."""
+    if not getattr(request.user, 'is_owner', False):
+        return JsonResponse({'error': "Ruxsat yo'q."}, status=403)
+
+    if not settings.GEMINI_API_KEY:
+        return JsonResponse(
+            {'error': "AI xizmati hozircha sozlanmagan. Administrator bilan bog'laning."},
+            status=503,
+        )
+
+    try:
+        payload = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'error': "So'rov noto'g'ri formatda."}, status=400)
+
+    category = (payload.get('category') or '').strip().lower()
+    if category not in CATEGORY_LABELS:
+        return JsonResponse({'error': "Noto'g'ri turi tanlandi."}, status=400)
+
+    purpose = (payload.get('purpose') or '').strip()
+    if not purpose or len(purpose) < 10:
+        return JsonResponse({'error': "Maqsadni batafsilroq yozing (kamida 10 belgi)."}, status=400)
+    if len(purpose) > 1500:
+        return JsonResponse({'error': "Maqsad juda uzun (max 1500 belgi)."}, status=400)
+
+    yield_volume = (payload.get('yield_volume') or '').strip()[:60]
+    constraints = (payload.get('constraints') or '').strip()[:600]
+
+    user_prompt_parts = [
+        f"Mahsulot turi: {CATEGORY_LABELS[category]}.",
+        f"Vazifa va talab: {purpose}",
+    ]
+    if yield_volume:
+        user_prompt_parts.append(f"Maqsadli hosil hajmi: {yield_volume}.")
+    if constraints:
+        user_prompt_parts.append(f"Qo'shimcha shartlar va cheklovlar: {constraints}")
+    user_prompt_parts.append(
+        "Yuqoridagi talablar asosida JSON formatda professional formulani yarat."
+    )
+    user_prompt = "\n".join(user_prompt_parts)
+
+    request_body = {
+        'system_instruction': {'parts': [{'text': LAB_SYSTEM_PROMPT}]},
+        'contents': [{'role': 'user', 'parts': [{'text': user_prompt}]}],
+        'generationConfig': {
+            'temperature': 0.5,
+            'maxOutputTokens': 1500,
+            'response_mime_type': 'application/json',
+        },
+    }
+
+    last_status = None
+    used_model = ''
+    for model in _candidate_models():
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent"
+        )
+        for attempt in range(2):
+            try:
+                resp = requests.post(
+                    url,
+                    params={'key': settings.GEMINI_API_KEY},
+                    json=request_body,
+                    timeout=40,
+                )
+            except requests.RequestException:
+                last_status = 'conn'
+                break
+
+            if resp.status_code == 200:
+                data = resp.json()
+                try:
+                    raw_text = data['candidates'][0]['content']['parts'][0]['text']
+                except (KeyError, IndexError, TypeError):
+                    return JsonResponse(
+                        {'error': "AI javob bera olmadi. Maqsadni boshqacha izohlang."},
+                        status=502,
+                    )
+                try:
+                    parsed = _parse_lab_response(raw_text)
+                except (json.JSONDecodeError, ValueError):
+                    return JsonResponse(
+                        {'error': "AI tushunarli formatda javob bermadi. Qaytadan urinib ko'ring."},
+                        status=502,
+                    )
+                used_model = model
+                return JsonResponse({
+                    'recipe': parsed,
+                    'category': category,
+                    'ai_model': used_model,
+                })
+
+            last_status = resp.status_code
+            if resp.status_code == 503 and attempt == 0:
+                time.sleep(1.2)
+                continue
+            break
+
+    if last_status == 429:
+        msg = "AI xizmati so'rovlar limitiga yetdi. Bir necha daqiqadan so'ng urinib ko'ring."
+    elif last_status == 503:
+        msg = "AI xizmati hozir juda band. Iltimos, biroz kutib qayta urinib ko'ring."
+    elif last_status == 'conn':
+        msg = "AI xizmatiga ulanib bo'lmadi. Internet aloqasini tekshiring."
+    else:
+        msg = "AI xizmatida xatolik yuz berdi. Keyinroq urinib ko'ring."
+    return JsonResponse({'error': msg}, status=502)

@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from accounts.models import User
-from core.models import Order, Bonus, LoyaltyToken, Receipt
+from core.models import Order, Bonus, LoyaltyToken, Receipt, ChemicalRecipe
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -141,6 +141,112 @@ def order_history(request):
         'payment_filter': payment_filter,
         'statuses':       Order.Status.choices,
     })
+
+
+@owner_required
+def lab_dashboard(request):
+    """Kimyoviy laboratoriya — formulalar ro'yxati va yangi yaratish formasi."""
+    recipes = ChemicalRecipe.objects.filter(owner=request.user)
+    category_filter = request.GET.get('cat', '').strip()
+    if category_filter and category_filter in dict(ChemicalRecipe.Category.choices):
+        recipes = recipes.filter(category=category_filter)
+
+    return render(request, 'owner/lab/dashboard.html', {
+        'recipes':         recipes,
+        'categories':      ChemicalRecipe.Category.choices,
+        'category_filter': category_filter,
+        'category_icons':  ChemicalRecipe.CATEGORY_ICONS,
+        'total_count':     ChemicalRecipe.objects.filter(owner=request.user).count(),
+    })
+
+
+@owner_required
+def lab_save(request):
+    """AI yaratgan formulani DB ga saqlash."""
+    if request.method != 'POST':
+        return redirect('owner:lab_dashboard')
+
+    import json as _json
+
+    name = (request.POST.get('name') or '').strip()[:120]
+    category = (request.POST.get('category') or 'other').strip().lower()
+    purpose = (request.POST.get('purpose') or '').strip()
+    yield_volume = (request.POST.get('yield_volume') or '').strip()[:50]
+    ingredients_raw = request.POST.get('ingredients') or ''
+    instructions_raw = request.POST.get('instructions') or ''
+    safety_raw = request.POST.get('safety_notes') or ''
+    usage_raw = request.POST.get('usage_notes') or ''
+    ai_model = (request.POST.get('ai_model') or '').strip()[:60]
+
+    if not name or not purpose or not ingredients_raw or not instructions_raw:
+        messages.error(request, "Formula nomi, maqsad, tarkib va ko'rsatma majburiy.")
+        return redirect('owner:lab_dashboard')
+
+    if category not in dict(ChemicalRecipe.Category.choices):
+        category = ChemicalRecipe.Category.OTHER
+
+    # Komponentlar — JSON sifatida kelganini matnga normalizatsiya qilamiz
+    def _normalize(value):
+        value = (value or '').strip()
+        if not value:
+            return ''
+        try:
+            data = _json.loads(value)
+            if isinstance(data, list):
+                lines = []
+                for it in data:
+                    if isinstance(it, dict):
+                        name_ = it.get('name', '').strip()
+                        amount = it.get('amount', '').strip()
+                        role = it.get('role', '').strip()
+                        parts = [p for p in (name_, amount, role) if p]
+                        lines.append(' — '.join(parts) if parts else str(it))
+                    else:
+                        lines.append(str(it))
+                return '\n'.join(lines)
+            return str(data)
+        except (ValueError, TypeError):
+            return value
+
+    recipe = ChemicalRecipe.objects.create(
+        owner=request.user,
+        name=name,
+        category=category,
+        purpose=purpose[:1500],
+        yield_volume=yield_volume,
+        ingredients=_normalize(ingredients_raw),
+        instructions=_normalize(instructions_raw),
+        safety_notes=_normalize(safety_raw),
+        usage_notes=_normalize(usage_raw),
+        ai_model=ai_model,
+    )
+    messages.success(request, f"Formula «{recipe.name}» saqlandi.")
+    return redirect('owner:lab_detail', pk=recipe.pk)
+
+
+@owner_required
+def lab_detail(request, pk):
+    recipe = get_object_or_404(ChemicalRecipe, pk=pk, owner=request.user)
+    return render(request, 'owner/lab/detail.html', {'recipe': recipe})
+
+
+@owner_required
+def lab_delete(request, pk):
+    recipe = get_object_or_404(ChemicalRecipe, pk=pk, owner=request.user)
+    if request.method == 'POST':
+        name = recipe.name
+        recipe.delete()
+        messages.info(request, f"«{name}» o'chirildi.")
+    return redirect('owner:lab_dashboard')
+
+
+@owner_required
+def lab_favorite(request, pk):
+    recipe = get_object_or_404(ChemicalRecipe, pk=pk, owner=request.user)
+    if request.method == 'POST':
+        recipe.is_favorite = not recipe.is_favorite
+        recipe.save(update_fields=['is_favorite', 'updated_at'])
+    return redirect('owner:lab_detail', pk=recipe.pk)
 
 
 @owner_required
