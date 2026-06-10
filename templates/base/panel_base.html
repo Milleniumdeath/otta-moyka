@@ -319,9 +319,10 @@
         .loy-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:4px; }
 
         /* MODAL */
-        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(2,16,36,0.8); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(6px); }
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(2,16,36,0.8); z-index:1000; align-items:flex-start; justify-content:center; backdrop-filter:blur(6px); overflow-y:auto; padding:20px 0; -webkit-overflow-scrolling:touch; }
         .modal-overlay.show { display:flex; }
-        .modal-box { background:var(--card-s); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid var(--border); border-radius:20px; padding:36px; max-width:420px; width:90%; text-align:center; }
+        .modal-box { background:var(--card-s); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:1px solid var(--border); border-radius:20px; padding:36px; max-width:420px; width:90%; text-align:center; max-height:calc(100vh - 40px); overflow-y:auto; margin:auto; }
+        @media (max-height: 720px) { .modal-box { padding:24px; } }
         .modal-icon { font-size:48px; color:var(--accent2); margin-bottom:14px; }
         .modal-title { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:1px; margin-bottom:8px; }
         .modal-text { color:var(--muted); font-size:14px; margin-bottom:28px; }
