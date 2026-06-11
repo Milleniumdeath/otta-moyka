@@ -140,7 +140,7 @@ def orders(request):
         worker_id=OuterRef('worker_id'),
         status=Order.Status.PENDING,
     ).order_by().values('worker_id').annotate(c=Count('id')).values('c')
-    ads = ServiceAd.objects.filter(is_active=True).select_related('worker').annotate(
+    ads_qs = ServiceAd.objects.filter(is_active=True).select_related('worker').annotate(
         worker_avg=Avg('worker__worker_orders__review__rating'),
         worker_reviews=Count('worker__worker_orders__review', distinct=True),
         worker_is_busy=Exists(busy_subq),
@@ -153,10 +153,22 @@ def orders(request):
     if selected_car:
         if selected_car.car_type == 'heavy':
             # Yuk mashina faqat "heavy" e'lonlarni ko'radi
-            ads = ads.filter(service_type='heavy')
+            ads_qs = ads_qs.filter(service_type='heavy')
         else:
             # Yengil mashina "heavy" e'lonlarni ko'rmaydi
-            ads = ads.exclude(service_type='heavy')
+            ads_qs = ads_qs.exclude(service_type='heavy')
+
+    # Bir ishchining bir xil xizmat turidagi bir nechta reklamasi bo'lsa,
+    # eng yaxshi reytingli/yangi reklamani tanlaymiz. Reyting bo'yicha tartiblangani uchun
+    # birinchi uchragan (ishchi, xizmat) juftligi eng yaxshisi.
+    seen_keys = set()
+    ads = []
+    for ad in ads_qs:
+        key = (ad.worker_id, ad.service_type)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        ads.append(ad)
 
     context = {
         'cars':         cars,
